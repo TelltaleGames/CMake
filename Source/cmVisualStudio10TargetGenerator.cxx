@@ -1153,6 +1153,16 @@ void cmVisualStudio10TargetGenerator::WritePathAndIncrementalLinkOptions()
         << cmSystemTools::GetFilenameLastExtension(targetNameFull.c_str())
         << "</TargetExt>\n";
 
+      //Xbox has a bug where it doesn't seem to respect the outdir set for a configuration.
+      //So we will simply hardcode the output path instead of using the defaults
+      if(this->Platform == "XBox 360")
+      {
+          this->WritePlatformConfigTag("OutputFile", config->c_str(), 3);
+          *this->BuildFileStream
+            << outDir << targetNameFull
+            << "</OutputFile>\n";
+      }
+
       this->OutputLinkIncremental(*config);
       }
     }
@@ -1475,7 +1485,7 @@ cmVisualStudio10TargetGenerator::ComputeLinkOptions(std::string const& config)
     {
     flags += " /SUBSYSTEM:WINDOWS";
     }
-  else
+  else if(this->Platform != "XBox 360")
     {
     flags += " /SUBSYSTEM:CONSOLE";
     }

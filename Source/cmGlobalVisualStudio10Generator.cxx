@@ -21,6 +21,7 @@
 static const char vs10Win32generatorName[] = "Visual Studio 10";
 static const char vs10Win64generatorName[] = "Visual Studio 10 Win64";
 static const char vs10IA64generatorName[] = "Visual Studio 10 IA64";
+static const char vs10X360generatorName[] = "Visual Studio 10 XBox 360";
 
 class cmGlobalVisualStudio10Generator::Factory
   : public cmGlobalGeneratorFactory
@@ -42,6 +43,11 @@ public:
       return new cmGlobalVisualStudio10Generator(
         vs10IA64generatorName, "Itanium", "CMAKE_FORCE_IA64");
       }
+    if(!strcmp(name, vs10X360generatorName))
+      {
+      return new cmGlobalVisualStudio10Generator(
+        vs10X360generatorName, "XBox 360", "CMAKE_FORCE_X360");
+      }
     return 0;
   }
 
@@ -58,7 +64,8 @@ public:
   virtual void GetGenerators(std::vector<std::string>& names) const {
     names.push_back(vs10Win32generatorName);
     names.push_back(vs10Win64generatorName);
-    names.push_back(vs10IA64generatorName); }
+    names.push_back(vs10IA64generatorName); 
+    names.push_back(vs10X360generatorName); }
 };
 
 //----------------------------------------------------------------------------

@@ -22,6 +22,7 @@
     <_ProjectFileVersion>10.0.30319.1</_ProjectFileVersion>
     <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|@id_arch@'">.\</OutDir>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|@id_arch@'">$(Configuration)\</IntDir>
+    <OutputFile>$(TargetName)$(TargetExt)</OutputFile>
     <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Debug|@id_arch@'">false</LinkIncremental>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|@id_arch@'">
@@ -30,16 +31,17 @@
       <PreprocessorDefinitions>%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MinimalRebuild>false</MinimalRebuild>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
-      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <RuntimeLibrary>@id_runtimelib@</RuntimeLibrary>
       <PrecompiledHeader>
       </PrecompiledHeader>
       <WarningLevel>TurnOffAllWarnings</WarningLevel>
       <DebugInformationFormat>
       </DebugInformationFormat>
+	  <CompileAs>Default</CompileAs>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>false</GenerateDebugInformation>
-      <SubSystem>Console</SubSystem>
+      <SubSystem>@id_subsystem_10@</SubSystem>
       <TargetMachine>@id_machine_10@</TargetMachine>
     </Link>
     <PostBuildEvent>
