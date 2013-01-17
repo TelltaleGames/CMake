@@ -49,6 +49,8 @@ public:
   // Check for specific options.
   bool UsingUnicode();
   bool UsingSBCS();
+  bool UsingRTTI();
+  bool UsingExceptions();
 
   bool IsDebug();
   // Write options to output.

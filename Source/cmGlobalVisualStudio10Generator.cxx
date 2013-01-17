@@ -22,6 +22,7 @@ static const char vs10Win32generatorName[] = "Visual Studio 10";
 static const char vs10Win64generatorName[] = "Visual Studio 10 Win64";
 static const char vs10IA64generatorName[] = "Visual Studio 10 IA64";
 static const char vs10X360generatorName[] = "Visual Studio 10 XBox 360";
+static const char vs10PS3generatorName[] = "Visual Studio 10 PS3";
 
 class cmGlobalVisualStudio10Generator::Factory
   : public cmGlobalGeneratorFactory
@@ -48,6 +49,11 @@ public:
       return new cmGlobalVisualStudio10Generator(
         vs10X360generatorName, "XBox 360", "CMAKE_FORCE_X360");
       }
+    if(!strcmp(name, vs10PS3generatorName))
+      {
+      return new cmGlobalVisualStudio10Generator(
+        vs10PS3generatorName, "PS3", "CMAKE_FORCE_PS3");
+      }
     return 0;
   }
 
@@ -65,7 +71,8 @@ public:
     names.push_back(vs10Win32generatorName);
     names.push_back(vs10Win64generatorName);
     names.push_back(vs10IA64generatorName); 
-    names.push_back(vs10X360generatorName); }
+    names.push_back(vs10X360generatorName);
+    names.push_back(vs10PS3generatorName); }
 };
 
 //----------------------------------------------------------------------------
@@ -86,6 +93,10 @@ cmGlobalVisualStudio10Generator::cmGlobalVisualStudio10Generator(
   this->ExpressEdition = cmSystemTools::ReadRegistryValue(
     "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\VCExpress\\10.0\\Setup\\VC;"
     "ProductDir", vc10Express, cmSystemTools::KeyWOW64_32);
+  if( architectureId && !strcmp(architectureId, "PS3") )
+  {
+      this->PlatformToolset = "SNC";
+  }
 }
 
 //----------------------------------------------------------------------------

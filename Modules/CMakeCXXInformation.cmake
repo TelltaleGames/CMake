@@ -40,7 +40,6 @@ if(CMAKE_COMPILER_IS_GNUCXX)
   set(CMAKE_BASE_NAME g++)
 endif()
 
-
 # load a hardware specific file, mostly useful for embedded compilers
 if(CMAKE_SYSTEM_PROCESSOR)
   if(CMAKE_CXX_COMPILER_ID)

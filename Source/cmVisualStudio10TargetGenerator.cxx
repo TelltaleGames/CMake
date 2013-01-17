@@ -453,7 +453,14 @@ void cmVisualStudio10TargetGenerator::WriteProjectConfigurationValues()
       {
       this->WriteString("<CharacterSet>MultiByte</CharacterSet>\n", 2);
       }
-    if(const char* toolset = gg->GetPlatformToolset())
+    if(this->Target->GetProperty("VS_PLATFORM_TOOLSET"))
+      {
+      std::string pts = "<PlatformToolset>";
+      pts += this->Target->GetProperty("VS_PLATFORM_TOOLSET");
+      pts += "</PlatformToolset>\n";
+      this->WriteString(pts.c_str(), 2);
+      }
+    else if(const char* toolset = gg->GetPlatformToolset())
       {
       std::string pts = "<PlatformToolset>";
       pts += toolset;
@@ -471,6 +478,26 @@ void cmVisualStudio10TargetGenerator::WriteProjectConfigurationValues()
       this->WriteString("<CLRSupport>true</CLRSupport>\n", 2);
       }
 
+    if(this->Platform == "PS3" && this->ClOptions[*i])
+      {
+      bool bRTTI = this->ClOptions[*i]->UsingRTTI();
+      bool bExceptions = false;//this->ClOptions[*i]->UsingExceptions();
+      if(!bRTTI && !bExceptions)
+      {
+          this->WriteString("<ExceptionsAndRtti>NoExceptsNoRtti"
+                          "</ExceptionsAndRtti>\n", 2);
+      }
+      else if(bRTTI && !bExceptions)
+      {
+          this->WriteString("<ExceptionsAndRtti>NoExceptsWithRtti"
+                          "</ExceptionsAndRtti>\n", 2);
+      }
+      else if(bRTTI && bExceptions)
+      {
+          this->WriteString("<ExceptionsAndRtti>WithExceptsWithRtti"
+                          "</ExceptionsAndRtti>\n", 2);
+      }
+      }
     this->WriteString("</PropertyGroup>\n", 1);
     }
 }

@@ -134,6 +134,18 @@ bool cmVisualStudioGeneratorOptions::UsingSBCS()
 }
 
 //----------------------------------------------------------------------------
+bool cmVisualStudioGeneratorOptions::UsingRTTI()
+{
+      return this->FlagMap.find("RuntimeTypeInfo") != this->FlagMap.end();
+}
+
+//----------------------------------------------------------------------------
+bool cmVisualStudioGeneratorOptions::UsingExceptions()
+{
+    return this->FlagMap.find("ExceptionHandling")  != this->FlagMap.end();
+}
+
+//----------------------------------------------------------------------------
 void cmVisualStudioGeneratorOptions::Parse(const char* flags)
 {
   // Parse the input string as a windows command line since the string
