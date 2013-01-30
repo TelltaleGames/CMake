@@ -345,6 +345,7 @@ void cmLocalVisualStudio7Generator::WriteConfigurations(std::ostream& fout,
     }
   fout << "\t</Configurations>\n";
 }
+
 cmVS7FlagTable cmLocalVisualStudio7GeneratorFortranFlagTable[] =
 {
   {"Preprocess", "fpp", "Run Preprocessor on files", "preprocessYes", 0},

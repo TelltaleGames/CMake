@@ -54,6 +54,7 @@ public:
   void SetBuildType(BuildType,const char *name);
 
   void SetPlatformName(const char* n) { this->PlatformName = n;}
+  std::string GetPlatformName() { return this->PlatformName; }
 
   void SetExtraFlagTable(cmVS7FlagTable const* table)
     { this->ExtraFlagTable = table; }

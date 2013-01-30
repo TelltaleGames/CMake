@@ -29,15 +29,17 @@
 #include <cmsys/auto_ptr.hxx>
 
 static cmVS7FlagTable const*
-cmVSGetCLFlagTable(cmLocalVisualStudioGenerator* lg)
+cmVSGetCLFlagTable(cmLocalVisualStudio7Generator* lg)
 {
+  if(lg->GetPlatformName() == "PS3")
+    { return cmVS10PS3FlagTable; }
   if(lg->GetVersion() >= cmLocalVisualStudioGenerator::VS11)
     { return cmVS11CLFlagTable; }
   return cmVS10CLFlagTable;
 }
 
 static cmVS7FlagTable const*
-cmVSGetLibFlagTable(cmLocalVisualStudioGenerator* lg)
+cmVSGetLibFlagTable(cmLocalVisualStudio7Generator* lg)
 {
   if(lg->GetVersion() >= cmLocalVisualStudioGenerator::VS11)
     { return cmVS11LibFlagTable; }
@@ -45,7 +47,7 @@ cmVSGetLibFlagTable(cmLocalVisualStudioGenerator* lg)
 }
 
 static cmVS7FlagTable const*
-cmVSGetLinkFlagTable(cmLocalVisualStudioGenerator* lg)
+cmVSGetLinkFlagTable(cmLocalVisualStudio7Generator* lg)
 {
   if(lg->GetVersion() >= cmLocalVisualStudioGenerator::VS11)
     { return cmVS11LinkFlagTable; }
