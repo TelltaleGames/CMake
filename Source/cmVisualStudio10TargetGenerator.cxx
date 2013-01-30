@@ -1190,6 +1190,15 @@ void cmVisualStudio10TargetGenerator::WritePathAndIncrementalLinkOptions()
           *this->BuildFileStream
             << outDir << targetNameFull
             << "</OutputFile>\n";
+
+          if(ttype == cmTarget::EXECUTABLE)
+          {
+            this->WritePlatformConfigTag("ImageXexOutput", config->c_str(), 3);
+            *this->BuildFileStream
+            << outDir << cmSystemTools::GetFilenameWithoutLastExtension(
+                targetNameFull.c_str()) << ".xex" 
+            << "</ImageXexOutput>\n";
+          }
       }
 
       this->OutputLinkIncremental(*config);
