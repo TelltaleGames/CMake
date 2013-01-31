@@ -273,12 +273,8 @@ static cmVS7FlagTable cmVS10PS3FlagTable[] =
 {
 
   //Enum Properties
-  {"DebugInformationFormat", "Z7",
-   "C7 compatible", "OldStyle", 0},
-  {"DebugInformationFormat", "Zi",
-   "Program Database", "ProgramDatabase", 0},
-  {"DebugInformationFormat", "ZI",
-   "Program Database for Edit And Continue", "EditAndContinue", 0},
+  {"GenerateDebugInformation", "Zi",
+   "Generate Debug Information", "true", 0},
 
   {"Warnings", "W0",
    "Turn Off All Warnings", "TurnOffWarnings", 0},
@@ -302,6 +298,14 @@ static cmVS7FlagTable cmVS10PS3FlagTable[] =
   {"OptimizationLevel", "Ox",
    "Full Optimization", "Level2", 0},
 
+  {"FloatingPointModel", "fp:precise",
+   "FastMath", "false", 0},
+  {"FloatingPointModel", "fp:strict",
+   "FastMath", "false", 0},
+  {"FloatingPointModel", "fp:fast",
+   "FastMath", "true", 0},
+
+   //MSVC Properties
   {"InlineFunctionExpansion", "",
    "Default", "Default", 0},
   {"InlineFunctionExpansion", "Ob0",
@@ -357,20 +361,6 @@ static cmVS7FlagTable cmVS10PS3FlagTable[] =
    "16 Bytes", "16Bytes", 0},
   {"StructMemberAlignment", "",
    "Default", "Default", 0},
-
-  {"EnableEnhancedInstructionSet", "arch:SSE",
-   "Streaming SIMD Extensions (/arch:SSE)", "StreamingSIMDExtensions", 0},
-  {"EnableEnhancedInstructionSet", "arch:SSE2",
-   "Streaming SIMD Extensions 2 (/arch:SSE2)", "StreamingSIMDExtensions2", 0},
-  {"EnableEnhancedInstructionSet", "",
-   "Not Set", "NotSet", 0},
-
-  {"FloatingPointModel", "fp:precise",
-   "FastMath", "false", 0},
-  {"FloatingPointModel", "fp:strict",
-   "FastMath", "false", 0},
-  {"FloatingPointModel", "fp:fast",
-   "FastMath", "true", 0},
 
   {"PrecompiledHeader", "Yc",
    "Create", "Create",
