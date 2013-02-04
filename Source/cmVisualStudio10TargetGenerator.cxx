@@ -49,6 +49,8 @@ cmVSGetLibFlagTable(cmLocalVisualStudio7Generator* lg)
 static cmVS7FlagTable const*
 cmVSGetLinkFlagTable(cmLocalVisualStudio7Generator* lg)
 {
+  if(lg->GetPlatformName() == "PS3")
+    { return cmVS10PS3LinkFlagTable; }
   if(lg->GetVersion() >= cmLocalVisualStudioGenerator::VS11)
     { return cmVS11LinkFlagTable; }
   return cmVS10LinkFlagTable;

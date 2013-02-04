@@ -271,7 +271,8 @@ static cmVS7FlagTable cmVS10CLFlagTable[] =
 
 static cmVS7FlagTable cmVS10PS3FlagTable[] =
 {
-
+    
+  //Fixed PS3 properties
   //Enum Properties
   {"GenerateDebugInformation", "Zi",
    "Generate Debug Information", "true", 0},
