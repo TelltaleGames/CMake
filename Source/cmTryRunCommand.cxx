@@ -139,7 +139,7 @@ bool cmTryRunCommand
   // now try running the command if it compiled
   if (!res)
     {
-    if (this->OutputFile.size() == 0)
+    if (this->OutputFile.size() == 0 && !this->Makefile->IsOn("CMAKE_CROSSCOMPILING"))
       {
       cmSystemTools::Error(this->FindErrorMessage.c_str());
       }

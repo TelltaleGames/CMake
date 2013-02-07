@@ -370,7 +370,7 @@ int cmCoreTryCompile::TryCompileCode(std::vector<std::string> const& argv)
 
     if(this->Makefile->GetDefinition("CMAKE_TRY_COMPILE_FIXUP")!=0)
       {
-      fprintf(fout, this->Makefile->GetDefinition("CMAKE_TRY_COMPILE_FIXUP"));
+      fprintf(fout, "%s\n", this->Makefile->GetDefinition("CMAKE_TRY_COMPILE_FIXUP"));
       }
 
     fclose(fout);
@@ -429,8 +429,11 @@ int cmCoreTryCompile::TryCompileCode(std::vector<std::string> const& argv)
           {
           emsg << this->FindErrorMessage.c_str();
           }
-        this->Makefile->IssueMessage(cmake::FATAL_ERROR, emsg.str());
-        return -1;
+        if (!this->Makefile->IsOn("CMAKE_CROSSCOMPILING"))
+          {
+          this->Makefile->IssueMessage(cmake::FATAL_ERROR, emsg.str());
+          return -1;
+          }
         }
       }
     }
