@@ -617,6 +617,8 @@ bool cmQtAutomoc::RunAutomoc(cmMakefile* makefile)
       {
       std::cout << "AUTOMOC: Checking " << absFilename << std::endl;
       }
+    if (*it == this->OutMocCppFilename)
+        continue;
     if (this->RelaxedMode)
       {
       this->ParseCppFile(absFilename, headerExtensions, includedMocs);
