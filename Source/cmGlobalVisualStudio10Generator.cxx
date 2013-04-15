@@ -23,6 +23,7 @@ static const char vs10Win64generatorName[] = "Visual Studio 10 Win64";
 static const char vs10IA64generatorName[] = "Visual Studio 10 IA64";
 static const char vs10X360generatorName[] = "Visual Studio 10 XBox 360";
 static const char vs10PS3generatorName[] = "Visual Studio 10 PS3";
+static const char vs10VitageneratorName[] = "Visual Studio 10 PSVita";
 
 class cmGlobalVisualStudio10Generator::Factory
   : public cmGlobalGeneratorFactory
@@ -54,6 +55,11 @@ public:
       return new cmGlobalVisualStudio10Generator(
         vs10PS3generatorName, "PS3", "CMAKE_FORCE_PS3");
       }
+    if(!strcmp(name, vs10VitageneratorName))
+      {
+      return new cmGlobalVisualStudio10Generator(
+        vs10VitageneratorName, "PSVita", "CMAKE_FORCE_PSVITA");
+      }
     return 0;
   }
 
@@ -72,7 +78,8 @@ public:
     names.push_back(vs10Win64generatorName);
     names.push_back(vs10IA64generatorName); 
     names.push_back(vs10X360generatorName);
-    names.push_back(vs10PS3generatorName); }
+    names.push_back(vs10PS3generatorName);
+    names.push_back(vs10VitageneratorName); }
 };
 
 //----------------------------------------------------------------------------
@@ -96,6 +103,10 @@ cmGlobalVisualStudio10Generator::cmGlobalVisualStudio10Generator(
   if( architectureId && !strcmp(architectureId, "PS3") )
   {
       this->PlatformToolset = "SNC";
+  }
+  if( architectureId && !strcmp(architectureId, "PSVita") )
+  {
+      this->PlatformToolset = "PSVita";
   }
 }
 

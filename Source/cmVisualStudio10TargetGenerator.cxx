@@ -20,6 +20,8 @@
 #include "cmVisualStudioGeneratorOptions.h"
 #include "cmLocalVisualStudio7Generator.h"
 #include "cmVS10CLFlagTable.h"
+#include "cmVS10CLFlagTablePS3.h"
+#include "cmVS10CLFlagTablePSVita.h"
 #include "cmVS10LinkFlagTable.h"
 #include "cmVS10LibFlagTable.h"
 #include "cmVS11CLFlagTable.h"
@@ -33,6 +35,8 @@ cmVSGetCLFlagTable(cmLocalVisualStudio7Generator* lg)
 {
   if(lg->GetPlatformName() == "PS3")
     { return cmVS10PS3FlagTable; }
+  if(lg->GetPlatformName() == "PSVita")
+    { return cmVS10PSVitaFlagTable; }
   if(lg->GetVersion() >= cmLocalVisualStudioGenerator::VS11)
     { return cmVS11CLFlagTable; }
   return cmVS10CLFlagTable;
