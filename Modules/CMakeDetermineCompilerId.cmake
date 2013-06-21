@@ -321,7 +321,7 @@ endfunction()
 # Function to extract the compiler id from an executable.
 function(CMAKE_DETERMINE_COMPILER_ID_CHECK lang file)
   # Look for a compiler id if not yet known.
-  if(NOT CMAKE_${lang}_COMPILER_ID)
+  if(NOT CMAKE_${lang}_COMPILER_ID)	
     # Read the compiler identification string from the executable file.
     set(COMPILER_ID)
     set(COMPILER_VERSION)
@@ -352,6 +352,13 @@ function(CMAKE_DETERMINE_COMPILER_ID_CHECK lang file)
       endif()
     endforeach()
 
+  	#SN Compiler self
+    file(READ ${file} CMAKE_EXECUTABLE_MAGIC LIMIT 4 HEX)
+    if("${CMAKE_EXECUTABLE_MAGIC}" STREQUAL "53434500")
+      set(CMAKE_EXECUTABLE_FORMAT "ELF" CACHE INTERNAL "Executable file format")
+      set(CMAKE_${lang}_COMPILER_ID "GNU")
+	endif()
+	
     # Check if a valid compiler and platform were found.
     if(COMPILER_ID AND NOT COMPILER_ID_TWICE)
       set(CMAKE_${lang}_COMPILER_ID "${COMPILER_ID}")

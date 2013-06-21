@@ -27,9 +27,9 @@ static cmVS7FlagTable cmVS10PSVitaFlagTable[] =
   {"OptimizationLevel", "O3",
    "Full Optimization", "Level3", 0},
 
-  {"FloatingPointModel", "Xfastmath=0",
+  {"FastMath", "Xfastmath=0",
    "FastMath", "false", 0},
-  {"FloatingPointModel", "Xfastmath=1",
+  {"FastMath", "Xfastmath=1",
    "FastMath", "true", 0},
 
   {"PrecompiledHeader", "create_pch",
