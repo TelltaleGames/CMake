@@ -32,6 +32,11 @@ static cmVS7FlagTable cmVS10PSVitaFlagTable[] =
   {"FastMath", "Xfastmath=1",
    "FastMath", "true", 0},
 
+  {"InstructionSet", "Xthumb=0",
+   "InstructionSet", "ARM", 0},
+  {"InstructionSet", "Xthumb=1",
+   "InstructionSet", "Thumb2", 0},
+
   {"PrecompiledHeader", "create_pch",
    "Create", "Create",
    cmVS7FlagTable::UserValueIgnored | cmVS7FlagTable::Continue},
