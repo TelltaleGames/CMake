@@ -448,6 +448,8 @@ void cmNinjaNormalTargetGenerator::WriteLinkStatement()
                         ::EncodeLiteral(vars["LINK_FLAGS"]);
 
   vars["LINK_PATH"] = frameworkPath + linkPath;
+  std::string& linkPaths = vars["LINK_PATH"];
+  std::replace(linkPaths.begin(), linkPaths.end(), '\\', '/');
 
   // Compute architecture specific link flags.  Yes, these go into a different
   // variable for executables, probably due to a mistake made when duplicating
