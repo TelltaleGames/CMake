@@ -28,11 +28,11 @@ static cmVS7FlagTable cmVS10PS3FlagTable[] =
   {"OptimizationLevel", "Ox",
    "Full Optimization", "Level2", 0},
 
-  {"FloatingPointModel", "fp:precise",
+  {"FastMath", "fp:precise",
    "FastMath", "false", 0},
-  {"FloatingPointModel", "fp:strict",
+  {"FastMath", "fp:strict",
    "FastMath", "false", 0},
-  {"FloatingPointModel", "fp:fast",
+  {"FastMath", "fp:fast",
    "FastMath", "true", 0},
 
    //MSVC Properties
