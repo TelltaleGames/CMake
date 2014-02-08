@@ -15,6 +15,7 @@
 #include "cmLocalGenerator.h"
 #include "cmMakefile.h"
 #include "cmSystemTools.h"
+#include <cmsys/FStream.hxx>
 
 #include <ctype.h> // isspace
 
@@ -193,17 +194,8 @@ bool cmDependsC::WriteDependencies(const std::set<std::string>& sources,
           // Construct the name of the file as if it were in the current
           // include directory.  Avoid using a leading "./".
 
-          tempPathStr = "";
-          if((*i) == ".")
-            {
-            tempPathStr += current.FileName;
-            }
-          else
-            {
-            tempPathStr += *i;
-            tempPathStr+="/";
-            tempPathStr+=current.FileName;
-            }
+          tempPathStr =
+            cmSystemTools::CollapseCombinedPath(*i, current.FileName);
 
           // Look for the file in this location.
           if(cmSystemTools::FileExists(tempPathStr.c_str(), true))
@@ -255,7 +247,7 @@ bool cmDependsC::WriteDependencies(const std::set<std::string>& sources,
 
           // Try to scan the file.  Just leave it out if we cannot find
           // it.
-          std::ifstream fin(fullName.c_str());
+          cmsys::ifstream fin(fullName.c_str());
           if(fin)
             {
             // Add this file as a dependency.
@@ -300,7 +292,7 @@ void cmDependsC::ReadCacheFile()
     {
     return;
     }
-  std::ifstream fin(this->CacheFileName.c_str());
+  cmsys::ifstream fin(this->CacheFileName.c_str());
   if(!fin)
     {
     return;
@@ -389,7 +381,7 @@ void cmDependsC::WriteCacheFile() const
     {
     return;
     }
-  std::ofstream cacheOut(this->CacheFileName.c_str());
+  cmsys::ofstream cacheOut(this->CacheFileName.c_str());
   if(!cacheOut)
     {
     return;
@@ -458,9 +450,8 @@ void cmDependsC::Scan(std::istream& is, const char* directory,
         // This was a double-quoted include with a relative path.  We
         // must check for the file in the directory containing the
         // file we are scanning.
-        entry.QuotedLocation = directory;
-        entry.QuotedLocation += "/";
-        entry.QuotedLocation += entry.FileName;
+        entry.QuotedLocation =
+          cmSystemTools::CollapseCombinedPath(directory, entry.FileName);
         }
 
       // Queue the file if it has not yet been encountered and it

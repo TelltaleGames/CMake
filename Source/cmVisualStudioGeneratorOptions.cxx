@@ -67,6 +67,7 @@ void cmVisualStudioGeneratorOptions::FixExceptionHandlingDefault()
       break;
     case cmLocalVisualStudioGenerator::VS10:
     case cmLocalVisualStudioGenerator::VS11:
+    case cmLocalVisualStudioGenerator::VS12:
       // by default VS puts <ExceptionHandling></ExceptionHandling> empty
       // for a project, to make our projects look the same put a new line
       // and space over for the closing </ExceptionHandling> as the default
@@ -99,13 +100,13 @@ void cmVisualStudioGeneratorOptions::SetVerboseMakefile(bool verbose)
     }
 }
 
-bool cmVisualStudioGeneratorOptions::IsDebug()
+bool cmVisualStudioGeneratorOptions::IsDebug() const
 {
   return this->FlagMap.find("DebugInformationFormat") != this->FlagMap.end();
 }
 
 //----------------------------------------------------------------------------
-bool cmVisualStudioGeneratorOptions::UsingUnicode()
+bool cmVisualStudioGeneratorOptions::UsingUnicode() const
 {
   // Look for the a _UNICODE definition.
   for(std::vector<std::string>::const_iterator di = this->Defines.begin();
@@ -119,7 +120,7 @@ bool cmVisualStudioGeneratorOptions::UsingUnicode()
   return false;
 }
 //----------------------------------------------------------------------------
-bool cmVisualStudioGeneratorOptions::UsingSBCS()
+bool cmVisualStudioGeneratorOptions::UsingSBCS() const
 {
   // Look for the a _SBCS definition.
   for(std::vector<std::string>::const_iterator di = this->Defines.begin();

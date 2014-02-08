@@ -59,6 +59,7 @@ private:
   void WriteSources(const char* tool, std::vector<cmSourceFile*> const&);
   void WriteAllSources();
   void WriteDotNetReferences();
+  void WriteEmbeddedResourceGroup();
   void WriteWinRTReferences();
   void WritePathAndIncrementalLinkOptions();
   void WriteItemDefinitionGroups();
@@ -86,7 +87,8 @@ private:
   void AddLibraries(cmComputeLinkInformation& cli, std::string& libstring);
   void WriteLibOptions(std::string const& config);
   void WriteEvents(std::string const& configName);
-  void WriteEvent(const char* name, std::vector<cmCustomCommand> & commands,
+  void WriteEvent(const char* name,
+                  std::vector<cmCustomCommand> const& commands,
                   std::string const& configName);
   void WriteGroupSources(const char* name, ToolSources const& sources,
                          std::vector<cmSourceGroup>& );

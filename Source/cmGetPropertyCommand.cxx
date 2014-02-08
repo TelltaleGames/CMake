@@ -13,6 +13,9 @@
 
 #include "cmake.h"
 #include "cmTest.h"
+#include "cmGlobalGenerator.h"
+#include "cmLocalGenerator.h"
+#include "cmSourceFile.h"
 #include "cmPropertyDefinition.h"
 
 //----------------------------------------------------------------------------
@@ -285,7 +288,19 @@ bool cmGetPropertyCommand::HandleTargetMode()
     return false;
     }
 
-  if(cmTarget* target = this->Makefile->FindTargetToUse(this->Name.c_str()))
+  if(this->PropertyName == "ALIASED_TARGET")
+    {
+    if(this->Makefile->IsAlias(this->Name))
+      {
+      if(cmTarget* target =
+                          this->Makefile->FindTargetToUse(this->Name))
+        {
+        return this->StoreResult(target->GetName());
+        }
+      }
+    return this->StoreResult((this->Variable + "-NOTFOUND").c_str());
+    }
+  if(cmTarget* target = this->Makefile->FindTargetToUse(this->Name))
     {
     return this->StoreResult(target->GetProperty(this->PropertyName.c_str()));
     }

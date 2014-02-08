@@ -47,12 +47,12 @@ public:
   void SetVerboseMakefile(bool verbose);
 
   // Check for specific options.
-  bool UsingUnicode();
-  bool UsingSBCS();
+  bool UsingUnicode() const;
+  bool UsingSBCS() const;
   bool UsingRTTI();
   bool UsingExceptions();
 
-  bool IsDebug();
+  bool IsDebug() const;
   // Write options to output.
   void OutputPreprocessorDefinitions(std::ostream& fout,
                                      const char* prefix,

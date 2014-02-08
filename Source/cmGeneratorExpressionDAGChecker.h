@@ -16,6 +16,26 @@
 
 #include "cmGeneratorExpressionEvaluator.h"
 
+#define CM_SELECT_BOTH(F, A1, A2) F(A1, A2)
+#define CM_SELECT_FIRST(F, A1, A2) F(A1)
+#define CM_SELECT_SECOND(F, A1, A2) F(A2)
+
+#define CM_FOR_EACH_TRANSITIVE_PROPERTY_IMPL(F, SELECT) \
+  SELECT(F, EvaluatingIncludeDirectories,       INCLUDE_DIRECTORIES) \
+  SELECT(F, EvaluatingSystemIncludeDirectories, SYSTEM_INCLUDE_DIRECTORIES) \
+  SELECT(F, EvaluatingCompileDefinitions,       COMPILE_DEFINITIONS) \
+  SELECT(F, EvaluatingCompileOptions,           COMPILE_OPTIONS) \
+  SELECT(F, EvaluatingAutoUicOptions,           AUTOUIC_OPTIONS)
+
+#define CM_FOR_EACH_TRANSITIVE_PROPERTY(F) \
+  CM_FOR_EACH_TRANSITIVE_PROPERTY_IMPL(F, CM_SELECT_BOTH)
+
+#define CM_FOR_EACH_TRANSITIVE_PROPERTY_METHOD(F) \
+  CM_FOR_EACH_TRANSITIVE_PROPERTY_IMPL(F, CM_SELECT_FIRST)
+
+#define CM_FOR_EACH_TRANSITIVE_PROPERTY_NAME(F) \
+  CM_FOR_EACH_TRANSITIVE_PROPERTY_IMPL(F, CM_SELECT_SECOND)
+
 //----------------------------------------------------------------------------
 struct cmGeneratorExpressionDAGChecker
 {
@@ -32,18 +52,26 @@ struct cmGeneratorExpressionDAGChecker
     ALREADY_SEEN
   };
 
-  Result check() const;
+  Result Check() const;
 
-  void reportError(cmGeneratorExpressionContext *context,
+  void ReportError(cmGeneratorExpressionContext *context,
                    const std::string &expr);
 
-  bool EvaluatingLinkLibraries();
-  bool EvaluatingIncludeDirectories() const;
-  bool EvaluatingCompileDefinitions() const;
-  bool EvaluatingCompileOptions() const;
+  bool EvaluatingLinkLibraries(const char *tgt = 0);
+
+#define DECLARE_TRANSITIVE_PROPERTY_METHOD(METHOD) \
+  bool METHOD () const;
+
+  CM_FOR_EACH_TRANSITIVE_PROPERTY_METHOD(DECLARE_TRANSITIVE_PROPERTY_METHOD)
+
+#undef DECLARE_TRANSITIVE_PROPERTY_METHOD
+
+  bool GetTransitivePropertiesOnly();
+  void SetTransitivePropertiesOnly()
+    { this->TransitivePropertiesOnly = true; }
 
 private:
-  Result checkGraph() const;
+  Result CheckGraph() const;
 
 private:
   const cmGeneratorExpressionDAGChecker * const Parent;
@@ -53,6 +81,7 @@ private:
   const GeneratorExpressionContent * const Content;
   const cmListFileBacktrace Backtrace;
   Result CheckResult;
+  bool TransitivePropertiesOnly;
 };
 
 #endif

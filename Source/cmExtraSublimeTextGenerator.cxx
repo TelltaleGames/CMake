@@ -45,13 +45,6 @@ void cmExtraSublimeTextGenerator
 {
   entry.Name = this->GetName();
   entry.Brief = "Generates Sublime Text 2 project files.";
-  entry.Full =
-    "Project files for Sublime Text 2 will be created in the top directory "
-    "and in every subdirectory which features a CMakeLists.txt file "
-    "containing a PROJECT() call. "
-    "Additionally Makefiles (or build.ninja files) are generated into the "
-    "build tree.  The appropriate make program can build the project through "
-    "the default make target.  A \"make install\" target is also provided.";
 }
 
 cmExtraSublimeTextGenerator::cmExtraSublimeTextGenerator()
@@ -179,30 +172,10 @@ void cmExtraSublimeTextGenerator::
         {
         case cmTarget::GLOBAL_TARGET:
           {
-          bool insertTarget = false;
           // Only add the global targets from CMAKE_BINARY_DIR,
           // not from the subdirs
           if (strcmp(makefile->GetStartOutputDirectory(),
                      makefile->GetHomeOutputDirectory())==0)
-            {
-            insertTarget = true;
-            // only add the "edit_cache" target if it's not ccmake, because
-            // this will not work within the IDE
-            if (ti->first == "edit_cache")
-              {
-              const char* editCommand = makefile->GetDefinition
-                                                        ("CMAKE_EDIT_COMMAND");
-              if (editCommand == 0)
-                {
-                insertTarget = false;
-                }
-              else if (strstr(editCommand, "ccmake")!=NULL)
-                {
-                insertTarget = false;
-                }
-              }
-            }
-          if (insertTarget)
             {
             this->AppendTarget(fout, ti->first.c_str(), *lg, 0,
                                make.c_str(), makefile, compiler.c_str(),
@@ -264,7 +237,8 @@ void cmExtraSublimeTextGenerator::
     {
       cmGeneratorTarget *gtgt = this->GlobalGenerator
                                     ->GetGeneratorTarget(target);
-      std::vector<cmSourceFile*> const& sourceFiles = target->GetSourceFiles();
+      std::vector<cmSourceFile*> sourceFiles;
+      target->GetSourceFiles(sourceFiles);
       std::vector<cmSourceFile*>::const_iterator sourceFilesEnd =
         sourceFiles.end();
       for (std::vector<cmSourceFile*>::const_iterator iter =
@@ -421,7 +395,7 @@ cmExtraSublimeTextGenerator::ComputeFlagsForObject(cmSourceFile* source,
   std::vector<std::string> includes;
   lg->GetIncludeDirectories(includes, gtgt, language, config);
   std::string includeFlags =
-    lg->GetIncludeFlags(includes, language, true); // full include paths
+    lg->GetIncludeFlags(includes, gtgt, language, true); // full include paths
   lg->AppendFlags(flags, includeFlags.c_str());
   }
 
@@ -429,34 +403,7 @@ cmExtraSublimeTextGenerator::ComputeFlagsForObject(cmSourceFile* source,
   lg->AppendFlags(flags, makefile->GetDefineFlags());
 
   // Add target-specific flags.
-  std::string targetFlags;
-  lg->GetCompileOptions(targetFlags, target, config);
-  if (!targetFlags.empty())
-    {
-    std::string langIncludeExpr = "CMAKE_";
-    langIncludeExpr += language;
-    langIncludeExpr += "_FLAG_REGEX";
-    const char* regex = makefile->GetDefinition(langIncludeExpr.c_str());
-    if(regex)
-      {
-      cmsys::RegularExpression r(regex);
-      std::vector<std::string> args;
-      cmSystemTools::
-        ParseWindowsCommandLine(targetFlags.c_str(), args);
-      for(std::vector<std::string>::iterator i = args.begin();
-          i != args.end(); ++i)
-        {
-        if(r.find(i->c_str()))
-          {
-          lg->AppendFlags(flags, i->c_str());
-          }
-        }
-      }
-    else
-      {
-      lg->AppendFlags(flags, targetFlags.c_str());
-      }
-    }
+  lg->AddCompileOptions(flags, target, config, language);
 
   // Add source file specific flags.
   lg->AppendFlags(flags, source->GetProperty("COMPILE_FLAGS"));
@@ -490,7 +437,7 @@ ComputeDefines(cmSourceFile *source, cmLocalGenerator* lg, cmTarget *target,
     }
 
   // Add preprocessor definitions for this target and configuration.
-  lg->AppendDefines(defines, target->GetCompileDefinitions(config));
+  lg->AddCompileDefinitions(defines, target, config);
   lg->AppendDefines(defines, source->GetProperty("COMPILE_DEFINITIONS"));
   {
   std::string defPropName = "COMPILE_DEFINITIONS_";

@@ -53,14 +53,16 @@ public:
    * Try running cmake and building a file. This is used for dynalically
    * loaded commands, not as part of the usual build process.
    */
-  virtual std::string GenerateBuildCommand(const char* makeProgram,
-                                           const char *projectName,
-                                           const char *projectDir,
-                                           const char* additionalOptions,
-                                           const char *targetName,
-                                           const char* config,
-                                           bool ignoreErrors,
-                                           bool fast);
+  virtual void GenerateBuildCommand(
+    std::vector<std::string>& makeCommand,
+    const char* makeProgram,
+    const char* projectName,
+    const char* projectDir,
+    const char* targetName,
+    const char* config,
+    bool fast,
+    std::vector<std::string> const& makeOptions = std::vector<std::string>()
+    );
 
   /**
    * Generate the all required files for building this project/tree. This
@@ -77,6 +79,9 @@ public:
 
   ///! What is the configurations directory variable called?
   virtual const char* GetCMakeCFGIntDir() const;
+  ///! expand CFGIntDir
+  virtual std::string ExpandCFGIntDir(const std::string& str,
+                                      const std::string& config) const;
 
   void SetCurrentLocalGenerator(cmLocalGenerator*);
 
@@ -85,6 +90,7 @@ public:
   virtual bool IsMultiConfig();
 
   virtual bool SetGeneratorToolset(std::string const& ts);
+  void AppendFlag(std::string& flags, std::string const& flag);
 private:
   cmXCodeObject* CreateOrGetPBXGroup(cmTarget& cmtarget,
                                      cmSourceGroup* sg);
@@ -122,7 +128,7 @@ private:
                                      multipleOutputPairs
                                 );
 
-  cmXCodeObject* FindXCodeTarget(cmTarget*);
+  cmXCodeObject* FindXCodeTarget(cmTarget const*);
   std::string GetOrCreateId(const char* name, const char* id);
 
   // create cmXCodeObject from these functions so that memory can be managed
@@ -198,7 +204,6 @@ private:
   void AppendDefines(BuildObjectListOrString& defs,
                      std::vector<std::string> const& defines,
                      bool dflag = false);
-  void AppendFlag(std::string& flags, std::string const& flag);
 
 protected:
   virtual const char* GetInstallTargetName() const { return "install"; }
@@ -210,6 +215,7 @@ protected:
   std::vector<cmXCodeObject*> XCodeObjects;
   cmXCodeObject* RootObject;
 private:
+  void PrintCompilerAdvice(std::ostream&, std::string, const char*) const {}
   void ComputeTargetObjects(cmGeneratorTarget* gt) const;
 
   std::string GetObjectsNormalDirectory(

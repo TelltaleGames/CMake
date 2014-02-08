@@ -1,13 +1,25 @@
-# - Try to find the OpenSSL encryption library
+#.rst:
+# FindOpenSSL
+# -----------
+#
+# Try to find the OpenSSL encryption library
+#
 # Once done this will define
 #
-#  OPENSSL_ROOT_DIR - Set this variable to the root installation of OpenSSL
+# ::
+#
+#   OPENSSL_ROOT_DIR - Set this variable to the root installation of OpenSSL
+#
+#
 #
 # Read-Only variables:
-#  OPENSSL_FOUND - system has the OpenSSL library
-#  OPENSSL_INCLUDE_DIR - the OpenSSL include directory
-#  OPENSSL_LIBRARIES - The libraries needed to use OpenSSL
-#  OPENSSL_VERSION - This is set to $major.$minor.$revision$path (eg. 0.9.8s)
+#
+# ::
+#
+#   OPENSSL_FOUND - system has the OpenSSL library
+#   OPENSSL_INCLUDE_DIR - the OpenSSL include directory
+#   OPENSSL_LIBRARIES - The libraries needed to use OpenSSL
+#   OPENSSL_VERSION - This is set to $major.$minor.$revision$path (eg. 0.9.8s)
 
 #=============================================================================
 # Copyright 2006-2009 Kitware, Inc.
@@ -47,16 +59,17 @@ if (WIN32)
     "C:/OpenSSL-Win64/"
     )
   unset(_programfiles)
-  set(_OPENSSL_ROOT_HINTS_AND_PATHS
-    HINTS ${_OPENSSL_ROOT_HINTS}
-    PATHS ${_OPENSSL_ROOT_PATHS}
-    )
 else ()
   set(_OPENSSL_ROOT_HINTS
     ${OPENSSL_ROOT_DIR}
     ENV OPENSSL_ROOT_DIR
     )
 endif ()
+
+set(_OPENSSL_ROOT_HINTS_AND_PATHS
+    HINTS ${_OPENSSL_ROOT_HINTS}
+    PATHS ${_OPENSSL_ROOT_PATHS}
+    )
 
 find_path(OPENSSL_INCLUDE_DIR
   NAMES
@@ -138,6 +151,8 @@ if(WIN32 AND NOT CYGWIN)
     select_library_configurations(LIB_EAY)
     select_library_configurations(SSL_EAY)
 
+    mark_as_advanced(LIB_EAY_LIBRARY_DEBUG LIB_EAY_LIBRARY_RELEASE
+                     SSL_EAY_LIBRARY_DEBUG SSL_EAY_LIBRARY_RELEASE)
     set( OPENSSL_LIBRARIES ${SSL_EAY_LIBRARY} ${LIB_EAY_LIBRARY} )
   elseif(MINGW)
     # same player, for MinGW
