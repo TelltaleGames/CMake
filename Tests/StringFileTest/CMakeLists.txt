@@ -127,25 +127,12 @@ string(LENGTH ${substringres} lengthres)
 
 file(RELATIVE_PATH relpath "/usr/local/bin" "/usr/X11R6/bin/xnest")
 
-# Escaping test
-set(var "\\ \" \  \t \n \r \# \( \) \0")
-message("Output: [${var}]")
-set(var \\ \" \  \t \n \r \# \( \) \0)
-message("Output: [${var}]")
-
 # Make-style unquoted argument test
 set(var $(VAR1)$(VAR2)/$(VAR3))
 message("Output: [${var}]")
 string(COMPARE EQUAL "${var}" "$(VAR1)$(VAR2)/$(VAR3)" result)
 if(NOT result)
   message(SEND_ERROR "Unquoted $(VAR) syntax is broken.")
-endif()
-
-# Obscure environment variable name
-set("ENV{x+(y)}" "Obscure environment variable value")
-message("Output: [$ENV{x+(y)}]")
-if(NOT "$ENV{x+(y)}" STREQUAL "Obscure environment variable value")
-  message(SEND_ERROR "Environment variable \"ENV{x+(y)}\" does not work.")
 endif()
 
 # Make directories test
@@ -285,4 +272,10 @@ string(MAKE_C_IDENTIFIER "1one-two$" MCI_1)
 
 if(NOT MCI_1 STREQUAL _1one_two_)
   message(SEND_ERROR "MAKE_C_IDENTIFIER did not create expected result.")
+endif()
+
+string(GENEX_STRIP "one;$<1:two;three>;four;$<TARGET_OBJECTS:some_target>" strip_result)
+
+if (NOT strip_result STREQUAL "one;four")
+  message(SEND_ERROR "GENEX_STRIP did not create expected result: ${strip_result}")
 endif()

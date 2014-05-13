@@ -50,7 +50,7 @@ for fpath in cmake_manuals:
                               name, desc, [], int(sec)))
         else:
             sys.stderr.write("ERROR: No cmake-manual-description in '%s'\n" % fpath)
-    except Exception, e:
+    except Exception as e:
         sys.stderr.write("ERROR: %s\n" % str(e))
 man_show_urls = False
 
@@ -61,3 +61,7 @@ html_theme = 'default'
 html_title = 'CMake %s Documentation' % release
 html_short_title = '%s Documentation' % release
 html_favicon = 'cmake-favicon.ico'
+# Not supported yet by sphinx:
+# https://bitbucket.org/birkenfeld/sphinx/issue/1448/make-qthelp-more-configurable
+# qthelp_namespace = "org.cmake"
+# qthelp_qch_name = "CMake-300.qch"

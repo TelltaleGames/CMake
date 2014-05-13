@@ -40,7 +40,7 @@ find_library(CURSES_CURSES_LIBRARY NAMES curses )
 find_library(CURSES_NCURSES_LIBRARY NAMES ncurses )
 set(CURSES_USE_NCURSES FALSE)
 
-if(CURSES_NCURSES_LIBRARY  AND NOT  CURSES_CURSES_LIBRARY)
+if(CURSES_NCURSES_LIBRARY  AND ((NOT CURSES_CURSES_LIBRARY) OR CURSES_NEED_NCURSES))
   set(CURSES_USE_NCURSES TRUE)
 endif()
 # http://cygwin.com/ml/cygwin-announce/2010-01/msg00002.html
@@ -67,6 +67,9 @@ endif()
 # default search paths.
 if(CURSES_CURSES_LIBRARY  AND  CURSES_NEED_NCURSES)
   include(${CMAKE_CURRENT_LIST_DIR}/CheckLibraryExists.cmake)
+  include(${CMAKE_CURRENT_LIST_DIR}/CMakePushCheckState.cmake)
+  cmake_push_check_state()
+  set(CMAKE_REQUIRED_QUIET ${Curses_FIND_QUIETLY})
   CHECK_LIBRARY_EXISTS("${CURSES_CURSES_LIBRARY}"
     wsyncup "" CURSES_CURSES_HAS_WSYNCUP)
 
@@ -77,6 +80,7 @@ if(CURSES_CURSES_LIBRARY  AND  CURSES_NEED_NCURSES)
       set(CURSES_USE_NCURSES TRUE)
     endif()
   endif()
+  cmake_pop_check_state()
 
 endif()
 
@@ -135,10 +139,20 @@ else()
       CACHE FILEPATH "The curses library" ${FORCE_IT})
   endif()
 
+  CHECK_LIBRARY_EXISTS("${CURSES_NCURSES_LIBRARY}"
+    cbreak "" CURSES_NCURSES_HAS_CBREAK)
+  if(NOT CURSES_NCURSES_HAS_CBREAK)
+    find_library(CURSES_EXTRA_LIBRARY tinfo HINTS "${_cursesLibDir}")
+    find_library(CURSES_EXTRA_LIBRARY tinfo )
+    CHECK_LIBRARY_EXISTS("${CURSES_EXTRA_LIBRARY}"
+      cbreak "" CURSES_TINFO_HAS_CBREAK)
+  endif()
 endif()
 
-find_library(CURSES_EXTRA_LIBRARY cur_colr HINTS "${_cursesLibDir}")
-find_library(CURSES_EXTRA_LIBRARY cur_colr )
+if (NOT CURSES_TINFO_HAS_CBREAK)
+  find_library(CURSES_EXTRA_LIBRARY cur_colr HINTS "${_cursesLibDir}")
+  find_library(CURSES_EXTRA_LIBRARY cur_colr )
+endif()
 
 find_library(CURSES_FORM_LIBRARY form HINTS "${_cursesLibDir}")
 find_library(CURSES_FORM_LIBRARY form )
@@ -182,5 +196,7 @@ mark_as_advanced(
   CURSES_INCLUDE_DIR
   CURSES_CURSES_HAS_WSYNCUP
   CURSES_NCURSES_HAS_WSYNCUP
+  CURSES_NCURSES_HAS_CBREAK
+  CURSES_TINFO_HAS_CBREAK
   )
 

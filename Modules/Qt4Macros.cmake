@@ -65,8 +65,8 @@ macro (QT4_MAKE_OUTPUT_FILE infile prefix ext outfile )
   else()
     file(RELATIVE_PATH rel ${CMAKE_CURRENT_SOURCE_DIR} ${infile})
   endif()
-  if(WIN32 AND rel MATCHES "^[a-zA-Z]:") # absolute path
-    string(REGEX REPLACE "^([a-zA-Z]):(.*)$" "\\1_\\2" rel "${rel}")
+  if(WIN32 AND rel MATCHES "^([a-zA-Z]):(.*)$") # absolute path
+    set(rel "${CMAKE_MATCH_1}_${CMAKE_MATCH_2}")
   endif()
   set(_outfile "${CMAKE_CURRENT_BINARY_DIR}/${rel}")
   string(REPLACE ".." "__" _outfile ${_outfile})
@@ -103,7 +103,7 @@ endmacro()
 
 
 # helper macro to set up a moc rule
-macro (QT4_CREATE_MOC_COMMAND infile outfile moc_flags moc_options moc_target)
+function (QT4_CREATE_MOC_COMMAND infile outfile moc_flags moc_options moc_target)
   # For Windows, create a parameters file to work around command line length limit
   # Pass the parameters in a file.  Set the working directory to
   # be that containing the parameters file and reference it by
@@ -135,16 +135,18 @@ macro (QT4_CREATE_MOC_COMMAND infile outfile moc_flags moc_options moc_target)
     set(targetincludes)
     set(targetdefines)
   else()
-    file(WRITE ${_moc_parameters_file} "${_moc_parameters}\n")
+    set(CMAKE_CONFIGURABLE_FILE_CONTENT "${_moc_parameters}")
+    configure_file("${CMAKE_ROOT}/Modules/CMakeConfigurableFile.in"
+                   "${_moc_parameters_file}" @ONLY)
   endif()
 
   set(_moc_extra_parameters_file @${_moc_parameters_file})
   add_custom_command(OUTPUT ${outfile}
                       COMMAND Qt4::moc ${_moc_extra_parameters_file}
-                      DEPENDS ${infile}
+                      DEPENDS ${infile} ${_moc_parameters_file}
                       ${_moc_working_dir}
                       VERBATIM)
-endmacro ()
+endfunction ()
 
 
 macro (QT4_GENERATE_MOC infile outfile )
@@ -342,7 +344,7 @@ macro(QT4_ADD_DBUS_ADAPTOR _sources _xml_file _include _parentClass) # _optional
 
   if(_optionalClassName)
     add_custom_command(OUTPUT "${_impl}" "${_header}"
-       COMMAND Qt4::qdbuscpp2xml -m -a ${_basename} -c ${_optionalClassName} -i ${_include} -l ${_parentClass} ${_infile}
+       COMMAND Qt4::qdbusxml2cpp -m -a ${_basename} -c ${_optionalClassName} -i ${_include} -l ${_parentClass} ${_infile}
        DEPENDS ${_infile} VERBATIM
     )
   else()

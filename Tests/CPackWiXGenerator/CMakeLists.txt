@@ -9,6 +9,11 @@ target_link_libraries(my-libapp mylib)
 
 add_executable(my-other-app myotherapp.cpp)
 
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/empty)
+install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/empty
+  DESTINATION extras
+  COMPONENT extras)
+
 install(TARGETS mylib
   ARCHIVE
   DESTINATION lib
@@ -49,9 +54,17 @@ set(CPACK_PACKAGE_EXECUTABLES
   "my-other-app" "Second CPack WiX Test"
 )
 
+set(CPACK_CREATE_DESKTOP_LINKS
+  "my-libapp"
+  "my-other-app"
+)
+
 set(CPACK_WIX_PATCH_FILE "${CMAKE_CURRENT_SOURCE_DIR}/patch.xml")
 
 set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/license.txt")
+
+set(CPACK_WIX_PROPERTY_ARPCOMMENTS "My Custom ARPCOMMENTS")
+set(CPACK_WIX_PROPERTY_ARPHELPLINK "http://www.cmake.org")
 
 include(CPack)
 
@@ -63,6 +76,12 @@ cpack_add_component_group(Runtime)
 cpack_add_component_group(Development
   EXPANDED
   DESCRIPTION "All of the tools you'll ever need to develop software")
+
+cpack_add_component(extras
+  DISPLAY_NAME "Extras"
+  DESCRIPTION "Extras"
+  GROUP Runtime
+  INSTALL_TYPES Full)
 
 cpack_add_component(applications
   REQUIRED

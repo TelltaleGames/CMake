@@ -25,7 +25,7 @@
 
 //----------------------------------------------------------------------------
 void cmExtraKateGenerator
-::GetDocumentation(cmDocumentationEntry& entry, const char*) const
+::GetDocumentation(cmDocumentationEntry& entry, const std::string&) const
 {
   entry.Name = this->GetName();
   entry.Brief = "Generates Kate project files.";
@@ -52,7 +52,7 @@ void cmExtraKateGenerator::Generate()
   this->ProjectName = this->GenerateProjectName(mf->GetProjectName(),
                           mf->GetSafeDefinition("CMAKE_BUILD_TYPE"),
                           this->GetPathBasename(mf->GetHomeOutputDirectory()));
-  this->UseNinja = (strcmp(this->GlobalGenerator->GetName(), "Ninja")==0);
+  this->UseNinja = (this->GlobalGenerator->GetName() == "Ninja");
 
   this->CreateKateProjectFile(mf);
   this->CreateDummyKateProjectFile(mf);
@@ -98,12 +98,12 @@ cmExtraKateGenerator::WriteTargets(const cmMakefile* mf,
   "\t\t\"clean_target\": \"clean\",\n";
 
   // build, clean and quick are for the build plugin kate <= 4.12:
-  fout << "\t\t\"build\": \"" << make << " -C " << homeOutputDir
-       << " " << makeArgs << " " << "all\",\n";
-  fout << "\t\t\"clean\": \"" << make << " -C " << homeOutputDir
-       << " " << makeArgs << " " << "clean\",\n";
-  fout << "\t\t\"quick\": \"" << make << " -C " << homeOutputDir
-       << " " << makeArgs << " " << "install\",\n";
+  fout << "\t\t\"build\": \"" << make << " -C \\\"" << homeOutputDir
+       << "\\\" " << makeArgs << " " << "all\",\n";
+  fout << "\t\t\"clean\": \"" << make << " -C \\\"" << homeOutputDir
+       << "\\\" " << makeArgs << " " << "clean\",\n";
+  fout << "\t\t\"quick\": \"" << make << " -C \\\"" << homeOutputDir
+       << "\\\" " << makeArgs << " " << "install\",\n";
 
   // this is for kate >= 4.13:
   fout <<
@@ -225,9 +225,9 @@ cmExtraKateGenerator::AppendTarget(cmGeneratedFileStream& fout,
   fout <<
     "\t\t\t" << JsonSep << "{\"name\":\"" << target << "\", "
     "\"build_cmd\":\"" << make
-                   << " -C " << (this->UseNinja ? homeOutputDir : path.c_str())
-                   << " " << makeArgs << " "
-                   << target << "\"}\n";
+               << " -C \\\"" << (this->UseNinja ? homeOutputDir : path.c_str())
+               << "\\\" " << makeArgs << " "
+               << target << "\"}\n";
 
   JsonSep = ',';
 }

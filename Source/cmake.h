@@ -91,16 +91,16 @@ class cmake
      */
     FIND_PACKAGE_MODE
   };
-  typedef std::map<cmStdString, cmCommand*> RegisteredCommandsMap;
+  typedef std::map<std::string, cmCommand*> RegisteredCommandsMap;
 
   /// Default constructor
   cmake();
   /// Destructor
   ~cmake();
 
-  static const char *GetCMakeFilesDirectory() {return "/CMakeFiles";};
+  static const char *GetCMakeFilesDirectory() {return "/CMakeFiles";}
   static const char *GetCMakeFilesDirectoryPostSlash() {
-    return "CMakeFiles/";};
+    return "CMakeFiles/";}
 
   //@{
   /**
@@ -110,12 +110,12 @@ class cmake
    * CMakeLists files by recursing up the tree starting at the StartDirectory
    * and going up until it reaches the HomeDirectory.
    */
-  void SetHomeDirectory(const char* dir);
+  void SetHomeDirectory(const std::string& dir);
   const char* GetHomeDirectory() const
     {
     return this->cmHomeDirectory.c_str();
     }
-  void SetHomeOutputDirectory(const char* lib);
+  void SetHomeOutputDirectory(const std::string& lib);
   const char* GetHomeOutputDirectory() const
     {
     return this->HomeOutputDirectory.c_str();
@@ -130,7 +130,7 @@ class cmake
    * recursing up the tree starting at the StartDirectory and going up until
    * it reaches the HomeDirectory.
    */
-  void SetStartDirectory(const char* dir)
+  void SetStartDirectory(const std::string& dir)
     {
       this->cmStartDirectory = dir;
       cmSystemTools::ConvertToUnixSlashes(this->cmStartDirectory);
@@ -139,7 +139,7 @@ class cmake
     {
       return this->cmStartDirectory.c_str();
     }
-  void SetStartOutputDirectory(const char* lib)
+  void SetStartOutputDirectory(const std::string& lib)
     {
       this->StartOutputDirectory = lib;
       cmSystemTools::ConvertToUnixSlashes(this->StartOutputDirectory);
@@ -175,7 +175,7 @@ class cmake
   void PreLoadCMakeFiles();
 
   ///! Create a GlobalGenerator
-  cmGlobalGenerator* CreateGlobalGenerator(const char* name);
+  cmGlobalGenerator* CreateGlobalGenerator(const std::string& name);
 
   ///! Return the global generator assigned to this instance of cmake
   cmGlobalGenerator* GetGlobalGenerator()     { return this->GlobalGenerator; }
@@ -203,9 +203,9 @@ class cmake
   /**
    * Given a variable name, return its value (as a string).
    */
-  const char* GetCacheDefinition(const char*) const;
+  const char* GetCacheDefinition(const std::string&) const;
   ///! Add an entry into the cache
-  void AddCacheEntry(const char* key, const char* value,
+  void AddCacheEntry(const std::string& key, const char* value,
                      const char* helpString,
                      int type);
 
@@ -218,20 +218,20 @@ class cmake
    * Add a command to this cmake instance
    */
   void AddCommand(cmCommand* );
-  void RenameCommand(const char* oldName, const char* newName);
-  void RemoveCommand(const char* name);
+  void RenameCommand(const std::string& oldName, const std::string& newName);
+  void RemoveCommand(const std::string& name);
   void RemoveUnscriptableCommands();
 
   /**
    * Get a command by its name
    */
-  cmCommand *GetCommand(const char *name);
+  cmCommand *GetCommand(const std::string& name);
 
   /** Get list of all commands */
   RegisteredCommandsMap* GetCommands() { return &this->Commands; }
 
   /** Check if a command exists. */
-  bool CommandExists(const char* name) const;
+  bool CommandExists(const std::string& name) const;
 
   ///! Parse command line arguments
   void SetArgs(const std::vector<std::string>&,
@@ -261,7 +261,7 @@ class cmake
   void UpdateProgress(const char *msg, float prog);
 
   ///!  get the cmake policies instance
-  cmPolicies *GetPolicies() {return this->Policies;} ;
+  cmPolicies *GetPolicies() {return this->Policies;}
 
   ///! Get the variable watch object
   cmVariableWatch* GetVariableWatch() { return this->VariableWatch; }
@@ -269,14 +269,16 @@ class cmake
   void GetGeneratorDocumentation(std::vector<cmDocumentationEntry>&);
 
   ///! Set/Get a property of this target file
-  void SetProperty(const char *prop, const char *value);
-  void AppendProperty(const char *prop, const char *value,bool asString=false);
-  const char *GetProperty(const char *prop);
-  const char *GetProperty(const char *prop, cmProperty::ScopeType scope);
-  bool GetPropertyAsBool(const char *prop);
+  void SetProperty(const std::string& prop, const char *value);
+  void AppendProperty(const std::string& prop,
+                      const char *value,bool asString=false);
+  const char *GetProperty(const std::string& prop);
+  const char *GetProperty(const std::string& prop,
+                          cmProperty::ScopeType scope);
+  bool GetPropertyAsBool(const std::string& prop);
 
   // Get the properties
-  cmPropertyMap &GetProperties() { return this->Properties; };
+  cmPropertyMap &GetProperties() { return this->Properties; }
 
   ///! Do all the checks before running configure
   int DoPreConfigureChecks();
@@ -317,18 +319,18 @@ class cmake
   void MarkCliAsUsed(const std::string& variable);
 
   // Define a property
-  void DefineProperty(const char *name, cmProperty::ScopeType scope,
+  void DefineProperty(const std::string& name, cmProperty::ScopeType scope,
                       const char *ShortDescription,
                       const char *FullDescription,
                       bool chain = false);
 
   // get property definition
   cmPropertyDefinition *GetPropertyDefinition
-  (const char *name, cmProperty::ScopeType scope);
+  (const std::string& name, cmProperty::ScopeType scope);
 
   // Is a property defined?
-  bool IsPropertyDefined(const char *name, cmProperty::ScopeType scope);
-  bool IsPropertyChained(const char *name, cmProperty::ScopeType scope);
+  bool IsPropertyDefined(const std::string& name, cmProperty::ScopeType scope);
+  bool IsPropertyChained(const std::string& name, cmProperty::ScopeType scope);
 
   /** Get the list of configurations (in upper case) considered to be
       debugging configurations.*/
@@ -355,21 +357,21 @@ class cmake
             const std::vector<std::string>& nativeOptions,
             bool clean);
 
-  void UnwatchUnusedCli(const char* var);
-  void WatchUnusedCli(const char* var);
+  void UnwatchUnusedCli(const std::string& var);
+  void WatchUnusedCli(const std::string& var);
 protected:
   void RunCheckForUnusedVariables();
   void InitializeProperties();
-  int HandleDeleteCacheVariables(const char* var);
+  int HandleDeleteCacheVariables(const std::string& var);
   cmPropertyMap Properties;
-  std::set<std::pair<cmStdString,cmProperty::ScopeType> > AccessedProperties;
+  std::set<std::pair<std::string,cmProperty::ScopeType> > AccessedProperties;
 
   std::map<cmProperty::ScopeType, cmPropertyDefinitionMap>
   PropertyDefinitions;
 
   typedef
      cmExternalMakefileProjectGenerator* (*CreateExtraGeneratorFunctionType)();
-  typedef std::map<cmStdString,
+  typedef std::map<std::string,
                 CreateExtraGeneratorFunctionType> RegisteredExtraGeneratorsMap;
   typedef std::vector<cmGlobalGeneratorFactory*> RegisteredGeneratorsVector;
   RegisteredCommandsMap Commands;
@@ -378,7 +380,7 @@ protected:
   void AddDefaultCommands();
   void AddDefaultGenerators();
   void AddDefaultExtraGenerators();
-  void AddExtraGenerator(const char* name,
+  void AddExtraGenerator(const std::string& name,
                          CreateExtraGeneratorFunctionType newFunction);
 
   cmPolicies *Policies;
@@ -430,7 +432,7 @@ private:
   bool WarnUnused;
   bool WarnUnusedCli;
   bool CheckSystemVars;
-  std::map<cmStdString, bool> UsedCliVariables;
+  std::map<std::string, bool> UsedCliVariables;
   std::string CMakeEditCommand;
   std::string CXXEnvironment;
   std::string CCEnvironment;
@@ -455,5 +457,53 @@ private:
   {"-T <toolset-name>", "Specify toolset name if supported by generator."}, \
   {"-Wno-dev", "Suppress developer warnings."},\
   {"-Wdev", "Enable developer warnings."}
+
+#define FOR_EACH_CXX_FEATURE(F) \
+  F(cxx_alias_templates) \
+  F(cxx_alignas) \
+  F(cxx_alignof) \
+  F(cxx_attributes) \
+  F(cxx_auto_type) \
+  F(cxx_constexpr) \
+  F(cxx_decltype) \
+  F(cxx_decltype_incomplete_return_types) \
+  F(cxx_default_function_template_args) \
+  F(cxx_defaulted_functions) \
+  F(cxx_defaulted_move_initializers) \
+  F(cxx_delegating_constructors) \
+  F(cxx_deleted_functions) \
+  F(cxx_enum_forward_declarations) \
+  F(cxx_explicit_conversions) \
+  F(cxx_extended_friend_declarations) \
+  F(cxx_extern_templates) \
+  F(cxx_final) \
+  F(cxx_func_identifier) \
+  F(cxx_generalized_initializers) \
+  F(cxx_inheriting_constructors) \
+  F(cxx_inline_namespaces) \
+  F(cxx_lambdas) \
+  F(cxx_local_type_template_args) \
+  F(cxx_long_long_type) \
+  F(cxx_noexcept) \
+  F(cxx_nonstatic_member_init) \
+  F(cxx_nullptr) \
+  F(cxx_override) \
+  F(cxx_range_for) \
+  F(cxx_raw_string_literals) \
+  F(cxx_reference_qualified_functions) \
+  F(cxx_right_angle_brackets) \
+  F(cxx_rvalue_references) \
+  F(cxx_sizeof_member) \
+  F(cxx_static_assert) \
+  F(cxx_strong_enums) \
+  F(cxx_template_template_parameters) \
+  F(cxx_thread_local) \
+  F(cxx_trailing_return_types) \
+  F(cxx_unicode_literals) \
+  F(cxx_uniform_initialization) \
+  F(cxx_unrestricted_unions) \
+  F(cxx_user_literals) \
+  F(cxx_variadic_macros) \
+  F(cxx_variadic_templates)
 
 #endif

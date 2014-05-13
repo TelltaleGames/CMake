@@ -157,7 +157,8 @@ if(MSVC)
         "${msvc_install_dir}/../../VC/redist"
         "${base_dir}/VC/redist"
         "$ENV{ProgramFiles}/Microsoft Visual Studio ${v}.0/VC/redist"
-        "$ENV{ProgramFiles(x86)}/Microsoft Visual Studio ${v}.0/VC/redist"
+        set(programfilesx86 "ProgramFiles(x86)")
+        "$ENV{${programfilesx86}}/Microsoft Visual Studio ${v}.0/VC/redist"
       )
     mark_as_advanced(MSVC${v}_REDIST_DIR)
     set(MSVC${v}_CRT_DIR "${MSVC${v}_REDIST_DIR}/${CMAKE_MSVC_ARCH}/Microsoft.VC${v}0.CRT")
@@ -295,25 +296,42 @@ if(MSVC)
     macro(MFC_FILES_FOR_VERSION version)
       set(v "${version}")
 
+      # Multi-Byte Character Set versions of MFC are available as optional
+      # addon since Visual Studio 12.  So for version 12 or higher, check
+      # whether they are available and exclude them if they are not.
+      if("${v}" LESS 12 OR EXISTS "${MSVC${v}_MFC_DIR}/mfc${v}0d.dll")
+        set(mbcs ON)
+      else()
+        set(mbcs OFF)
+      endif()
+
       if(CMAKE_INSTALL_DEBUG_LIBRARIES)
         set(MSVC${v}_MFC_DIR
           "${MSVC${v}_REDIST_DIR}/Debug_NonRedist/${CMAKE_MSVC_ARCH}/Microsoft.VC${v}0.DebugMFC")
         set(__install__libs ${__install__libs}
-          "${MSVC${v}_MFC_DIR}/mfc${v}0d.dll"
           "${MSVC${v}_MFC_DIR}/mfc${v}0ud.dll"
-          "${MSVC${v}_MFC_DIR}/mfcm${v}0d.dll"
           "${MSVC${v}_MFC_DIR}/mfcm${v}0ud.dll"
           )
+        if(mbcs)
+          set(__install__libs ${__install__libs}
+            "${MSVC${v}_MFC_DIR}/mfc${v}0d.dll"
+            "${MSVC${v}_MFC_DIR}/mfcm${v}0d.dll"
+          )
+        endif()
       endif()
 
       set(MSVC${v}_MFC_DIR "${MSVC${v}_REDIST_DIR}/${CMAKE_MSVC_ARCH}/Microsoft.VC${v}0.MFC")
       if(NOT CMAKE_INSTALL_DEBUG_LIBRARIES_ONLY)
         set(__install__libs ${__install__libs}
-          "${MSVC${v}_MFC_DIR}/mfc${v}0.dll"
           "${MSVC${v}_MFC_DIR}/mfc${v}0u.dll"
-          "${MSVC${v}_MFC_DIR}/mfcm${v}0.dll"
           "${MSVC${v}_MFC_DIR}/mfcm${v}0u.dll"
           )
+        if(mbcs)
+          set(__install__libs ${__install__libs}
+            "${MSVC${v}_MFC_DIR}/mfc${v}0.dll"
+            "${MSVC${v}_MFC_DIR}/mfcm${v}0.dll"
+          )
+        endif()
       endif()
 
       # include the language dll's as well as the actuall dll's
@@ -366,18 +384,18 @@ endif()
 
 if(WATCOM)
   get_filename_component( CompilerPath ${CMAKE_C_COMPILER} PATH )
-  if(WATCOM17)
-     set( __install__libs ${CompilerPath}/clbr17.dll
-       ${CompilerPath}/mt7r17.dll ${CompilerPath}/plbr17.dll )
+  if(CMAKE_C_COMPILER_VERSION)
+    set(_compiler_version ${CMAKE_C_COMPILER_VERSION})
+  else()
+    set(_compiler_version ${CMAKE_CXX_COMPILER_VERSION})
   endif()
-  if(WATCOM18)
-     set( __install__libs ${CompilerPath}/clbr18.dll
-       ${CompilerPath}/mt7r18.dll ${CompilerPath}/plbr18.dll )
-  endif()
-  if(WATCOM19)
-     set( __install__libs ${CompilerPath}/clbr19.dll
-       ${CompilerPath}/mt7r19.dll ${CompilerPath}/plbr19.dll )
-  endif()
+  string(REGEX MATCHALL "[0-9]+" _watcom_version_list "${_compiler_version}")
+  list(GET _watcom_version_list 0 _watcom_major)
+  list(GET _watcom_version_list 1 _watcom_minor)
+  set( __install__libs
+    ${CompilerPath}/clbr${_watcom_major}${_watcom_minor}.dll
+    ${CompilerPath}/mt7r${_watcom_major}${_watcom_minor}.dll
+    ${CompilerPath}/plbr${_watcom_major}${_watcom_minor}.dll )
   foreach(lib
       ${__install__libs}
       )

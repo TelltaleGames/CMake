@@ -30,6 +30,8 @@ static const char *cmDocumentationStandardOptions[][2] =
    "Print usage information and exit."},
   {"--version,-version,/V [<f>]",
    "Print version number and exit."},
+  {"--help-full [<f>]",
+   "Print all help manuals and exit."},
   {"--help-manual <man> [<f>]",
    "Print one help manual and exit."},
   {"--help-manual-list [<f>]",
@@ -112,6 +114,8 @@ bool cmDocumentation::PrintDocumentation(Type ht, std::ostream& os)
     {
     case cmDocumentation::Usage:
       return this->PrintDocumentationUsage(os);
+    case cmDocumentation::Full:
+      return this->PrintHelpFull(os);
     case cmDocumentation::OneManual:
       return this->PrintHelpOneManual(os);
     case cmDocumentation::OneCommand:
@@ -364,9 +368,9 @@ bool cmDocumentation::CheckOptions(int argc, const char* const* argv,
       }
     else if(strcmp(argv[i], "--help-full") == 0)
       {
+      help.HelpType = cmDocumentation::Full;
       GET_OPT_ARGUMENT(help.Filename);
-      cmSystemTools::Message("Warning: --help-full no longer supported");
-      return true;
+      this->WarnFormFromFilename(help, result);
       }
     else if(strcmp(argv[i], "--help-html") == 0)
       {
@@ -477,9 +481,9 @@ bool cmDocumentation::CheckOptions(int argc, const char* const* argv,
 }
 
 //----------------------------------------------------------------------------
-void cmDocumentation::SetName(const char* name)
+void cmDocumentation::SetName(const std::string& name)
 {
-  this->NameString = name?name:"";
+  this->NameString = name;
 }
 
 //----------------------------------------------------------------------------
@@ -672,9 +676,15 @@ bool cmDocumentation::PrintFiles(std::ostream& os,
   for (std::vector<std::string>::const_iterator i = files.begin();
        i != files.end(); ++i)
     {
-    found = r.ProcessFile(i->c_str()) || found;
+    found = r.ProcessFile(*i) || found;
     }
   return found;
+}
+
+//----------------------------------------------------------------------------
+bool cmDocumentation::PrintHelpFull(std::ostream& os)
+{
+  return this->PrintFiles(os, "index");
 }
 
 //----------------------------------------------------------------------------
@@ -693,7 +703,7 @@ bool cmDocumentation::PrintHelpOneManual(std::ostream& os)
     return true;
     }
   // Argument was not a manual.  Complain.
-  os << "Argument \"" << this->CurrentArgument.c_str()
+  os << "Argument \"" << this->CurrentArgument
      << "\" to --help-manual is not an available manual.  "
      << "Use --help-manual-list to see all available manuals.\n";
   return false;
@@ -715,7 +725,7 @@ bool cmDocumentation::PrintHelpOneCommand(std::ostream& os)
     return true;
     }
   // Argument was not a command.  Complain.
-  os << "Argument \"" << this->CurrentArgument.c_str()
+  os << "Argument \"" << this->CurrentArgument
      << "\" to --help-command is not a CMake command.  "
      << "Use --help-command-list to see all commands.\n";
   return false;
@@ -737,7 +747,7 @@ bool cmDocumentation::PrintHelpOneModule(std::ostream& os)
     return true;
     }
   // Argument was not a module.  Complain.
-  os << "Argument \"" << this->CurrentArgument.c_str()
+  os << "Argument \"" << this->CurrentArgument
      << "\" to --help-module is not a CMake module.\n";
   return false;
 }
@@ -772,7 +782,7 @@ bool cmDocumentation::PrintHelpOneProperty(std::ostream& os)
     return true;
     }
   // Argument was not a property.  Complain.
-  os << "Argument \"" << this->CurrentArgument.c_str()
+  os << "Argument \"" << this->CurrentArgument
      << "\" to --help-property is not a CMake property.  "
      << "Use --help-property-list to see all properties.\n";
   return false;
@@ -796,7 +806,7 @@ bool cmDocumentation::PrintHelpOnePolicy(std::ostream& os)
     }
 
   // Argument was not a policy.  Complain.
-  os << "Argument \"" << this->CurrentArgument.c_str()
+  os << "Argument \"" << this->CurrentArgument
      << "\" to --help-policy is not a CMake policy.\n";
   return false;
 }
@@ -817,7 +827,7 @@ bool cmDocumentation::PrintHelpOneVariable(std::ostream& os)
     return true;
     }
   // Argument was not a variable.  Complain.
-  os << "Argument \"" << this->CurrentArgument.c_str()
+  os << "Argument \"" << this->CurrentArgument
      << "\" to --help-variable is not a defined variable.  "
      << "Use --help-variable-list to see all defined variables.\n";
   return false;

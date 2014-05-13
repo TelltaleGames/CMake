@@ -21,6 +21,24 @@ from pygments.lexer import bygroups
 CMakeLexer.tokens["args"].append(('(\\$<)(.+?)(>)',
                                   bygroups(Operator, Name.Variable, Operator)))
 
+# Monkey patch for sphinx generating invalid content for qcollectiongenerator
+# https://bitbucket.org/birkenfeld/sphinx/issue/1435/qthelp-builder-should-htmlescape-keywords
+from sphinx.util.pycompat import htmlescape
+from sphinx.builders.qthelp import QtHelpBuilder
+old_build_keywords = QtHelpBuilder.build_keywords
+def new_build_keywords(self, title, refs, subitems):
+  old_items = old_build_keywords(self, title, refs, subitems)
+  new_items = []
+  for item in old_items:
+    before, rest = item.split("ref=\"", 1)
+    ref, after = rest.split("\"")
+    if ("<" in ref and ">" in ref):
+      new_items.append(before + "ref=\"" + htmlescape(ref) + "\"" + after)
+    else:
+      new_items.append(item)
+  return new_items
+QtHelpBuilder.build_keywords = new_build_keywords
+
 
 from docutils.parsers.rst import Directive, directives
 from docutils.transforms import Transform
@@ -62,12 +80,12 @@ class CMakeModule(Directive):
             settings.record_dependencies.add(path)
             f = io.FileInput(source_path=path, encoding=encoding,
                              error_handler=e_handler)
-        except UnicodeEncodeError, error:
+        except UnicodeEncodeError as error:
             raise self.severe('Problems with "%s" directive path:\n'
                               'Cannot encode input file path "%s" '
                               '(wrong locale?).' %
                               (self.name, SafeString(path)))
-        except IOError, error:
+        except IOError as error:
             raise self.severe('Problems with "%s" directive path:\n%s.' %
                       (self.name, ErrorString(error)))
         raw_lines = f.read().splitlines()
@@ -290,9 +308,12 @@ class CMakeDomain(Domain):
     }
 
     def clear_doc(self, docname):
+        to_clear = set()
         for fullname, (fn, _) in self.data['objects'].items():
             if fn == docname:
-                del self.data['objects'][fullname]
+                to_clear.add(fullname)
+        for fullname in to_clear:
+            del self.data['objects'][fullname]
 
     def resolve_xref(self, env, fromdocname, builder,
                      typ, target, node, contnode):
@@ -305,7 +326,7 @@ class CMakeDomain(Domain):
                             contnode, target)
 
     def get_objects(self):
-        for refname, (docname, type) in self.data['objects'].iteritems():
+        for refname, (docname, type) in self.data['objects'].items():
             yield (refname, refname, type, docname, refname, 1)
 
 def setup(app):

@@ -567,7 +567,7 @@ void cmCTestLaunch::WriteXMLLabels(std::ostream& fxml)
     fxml << "\n";
     fxml << "\t\t<!-- Interested parties -->\n";
     fxml << "\t\t<Labels>\n";
-    for(std::set<cmStdString>::const_iterator li = this->Labels.begin();
+    for(std::set<std::string>::const_iterator li = this->Labels.begin();
         li != this->Labels.end(); ++li)
       {
       fxml << "\t\t\t<Label>" << cmXMLSafe(*li) << "</Label>\n";
@@ -587,8 +587,7 @@ void cmCTestLaunch::DumpFileToXML(std::ostream& fxml,
 
   while(cmSystemTools::GetLineFromStream(fin, line))
     {
-    if(OptionFilterPrefix.size() && cmSystemTools::StringStartsWith(
-      line.c_str(), OptionFilterPrefix.c_str()))
+    if(MatchesFilterPrefix(line))
       {
       continue;
       }
@@ -676,8 +675,13 @@ bool cmCTestLaunch::ScrapeLog(std::string const& fname)
   std::string line;
   while(cmSystemTools::GetLineFromStream(fin, line))
     {
-    if(this->Match(line.c_str(), this->RegexWarning) &&
-       !this->Match(line.c_str(), this->RegexWarningSuppress))
+    if(MatchesFilterPrefix(line))
+      {
+      continue;
+      }
+
+    if(this->Match(line, this->RegexWarning) &&
+       !this->Match(line, this->RegexWarningSuppress))
       {
       return true;
       }
@@ -696,6 +700,17 @@ bool cmCTestLaunch::Match(std::string const& line,
       {
       return true;
       }
+    }
+  return false;
+}
+
+//----------------------------------------------------------------------------
+bool cmCTestLaunch::MatchesFilterPrefix(std::string const& line) const
+{
+  if(this->OptionFilterPrefix.size() && cmSystemTools::StringStartsWith(
+      line.c_str(), this->OptionFilterPrefix.c_str()))
+    {
+    return true;
     }
   return false;
 }

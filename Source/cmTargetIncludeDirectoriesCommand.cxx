@@ -11,6 +11,8 @@
 ============================================================================*/
 #include "cmTargetIncludeDirectoriesCommand.h"
 
+#include "cmGeneratorExpression.h"
+
 //----------------------------------------------------------------------------
 bool cmTargetIncludeDirectoriesCommand
 ::InitialPass(std::vector<std::string> const& args, cmExecutionStatus &)
@@ -64,7 +66,7 @@ std::string cmTargetIncludeDirectoriesCommand
 }
 
 //----------------------------------------------------------------------------
-void cmTargetIncludeDirectoriesCommand
+bool cmTargetIncludeDirectoriesCommand
 ::HandleDirectContent(cmTarget *tgt, const std::vector<std::string> &content,
                       bool prepend, bool system)
 {
@@ -76,6 +78,7 @@ void cmTargetIncludeDirectoriesCommand
     {
     tgt->AddSystemIncludeDirectories(content);
     }
+  return true;
 }
 
 //----------------------------------------------------------------------------

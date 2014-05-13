@@ -73,7 +73,7 @@ private:
   bool HaveErr;
 
   // Labels associated with the build rule.
-  std::set<cmStdString> Labels;
+  std::set<std::string> Labels;
   void LoadLabels();
   bool SourceMatches(std::string const& lhs,
                      std::string const& rhs);
@@ -88,6 +88,7 @@ private:
   bool ScrapeLog(std::string const& fname);
   bool Match(std::string const& line,
              std::vector<cmsys::RegularExpression>& regexps);
+  bool MatchesFilterPrefix(std::string const& line) const;
 
   // Methods to generate the xml fragment.
   void WriteXML();

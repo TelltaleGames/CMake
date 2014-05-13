@@ -58,11 +58,23 @@ add_custom_target(generate_moc_input
   COMMAND ${CMAKE_COMMAND} -E rename "${CMAKE_CURRENT_BINARY_DIR}/myinterface.h.in" "${CMAKE_CURRENT_BINARY_DIR}/myinterface.h"
 )
 
-add_executable(QtAutogen main.cpp calwidget.cpp foo.cpp blub.cpp bar.cpp abc.cpp
-               xyz.cpp yaf.cpp gadget.cpp $<TARGET_OBJECTS:privateSlot>
-               test.qrc resourcetester.cpp generated.cpp
+add_custom_command(
+  OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/myotherinterface.h"
+  COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/myotherinterface.h.in" "${CMAKE_CURRENT_BINARY_DIR}/myotherinterface.h"
+  DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/myotherinterface.h.in"
 )
-set_property(TARGET QtAutogen APPEND PROPERTY AUTOGEN_TARGET_DEPENDS generate_moc_input)
+
+message("CMAKE_BUILD_TYPE = ${CMAKE_BUILD_TYPE}")
+if (CMAKE_BUILD_TYPE MATCHES "[Dd][Ee][Bb][Uu][Gg]" AND NOT CMAKE_CONFIGURATION_TYPES)
+  set(debug_srcs "$<$<CONFIG:Debug>:debug_class.cpp>" $<$<CONFIG:Debug>:debug_resource.qrc>)
+  add_definitions(-DTEST_DEBUG_CLASS)
+endif()
+
+add_executable(QtAutogen main.cpp calwidget.cpp second_widget.cpp foo.cpp blub.cpp bar.cpp abc.cpp
+               xyz.cpp yaf.cpp gadget.cpp $<TARGET_OBJECTS:privateSlot>
+               test.qrc second_resource.qrc resourcetester.cpp generated.cpp ${debug_srcs}
+)
+set_property(TARGET QtAutogen APPEND PROPERTY AUTOGEN_TARGET_DEPENDS generate_moc_input "${CMAKE_CURRENT_BINARY_DIR}/myotherinterface.h")
 
 set_target_properties(QtAutogen codeeditorLib privateSlot PROPERTIES AUTOMOC TRUE)
 

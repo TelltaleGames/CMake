@@ -28,10 +28,11 @@ endif()
 if(${CMAKE_GENERATOR} MATCHES "Visual Studio")
 elseif("${CMAKE_GENERATOR}" MATCHES "Xcode")
   set(CMAKE_Fortran_COMPILER_XCODE_TYPE sourcecode.fortran.f90)
+  _cmake_find_compiler_path(Fortran)
 else()
   if(NOT CMAKE_Fortran_COMPILER)
     # prefer the environment variable CC
-    if($ENV{FC} MATCHES ".+")
+    if(NOT $ENV{FC} STREQUAL "")
       get_filename_component(CMAKE_Fortran_COMPILER_INIT $ENV{FC} PROGRAM PROGRAM_ARGS CMAKE_Fortran_FLAGS_ENV_INIT)
       if(CMAKE_Fortran_FLAGS_ENV_INIT)
         set(CMAKE_Fortran_COMPILER_ARG1 "${CMAKE_Fortran_FLAGS_ENV_INIT}" CACHE STRING "First argument to Fortran compiler")
@@ -90,31 +91,7 @@ else()
     _cmake_find_compiler(Fortran)
 
   else()
-     # we only get here if CMAKE_Fortran_COMPILER was specified using -D or a pre-made CMakeCache.txt
-    # (e.g. via ctest) or set in CMAKE_TOOLCHAIN_FILE
-    # if CMAKE_Fortran_COMPILER is a list of length 2, use the first item as
-    # CMAKE_Fortran_COMPILER and the 2nd one as CMAKE_Fortran_COMPILER_ARG1
-
-    list(LENGTH CMAKE_Fortran_COMPILER _CMAKE_Fortran_COMPILER_LIST_LENGTH)
-    if("${_CMAKE_Fortran_COMPILER_LIST_LENGTH}" EQUAL 2)
-      list(GET CMAKE_Fortran_COMPILER 1 CMAKE_Fortran_COMPILER_ARG1)
-      list(GET CMAKE_Fortran_COMPILER 0 CMAKE_Fortran_COMPILER)
-    endif()
-
-    # if a compiler was specified by the user but without path,
-    # now try to find it with the full path
-    # if it is found, force it into the cache,
-    # if not, don't overwrite the setting (which was given by the user) with "NOTFOUND"
-    # if the C compiler already had a path, reuse it for searching the CXX compiler
-    get_filename_component(_CMAKE_USER_Fortran_COMPILER_PATH "${CMAKE_Fortran_COMPILER}" PATH)
-    if(NOT _CMAKE_USER_Fortran_COMPILER_PATH)
-      find_program(CMAKE_Fortran_COMPILER_WITH_PATH NAMES ${CMAKE_Fortran_COMPILER})
-      if(CMAKE_Fortran_COMPILER_WITH_PATH)
-        set(CMAKE_Fortran_COMPILER ${CMAKE_Fortran_COMPILER_WITH_PATH}
-          CACHE STRING "Fortran compiler" FORCE)
-      endif()
-      unset(CMAKE_Fortran_COMPILER_WITH_PATH CACHE)
-    endif()
+    _cmake_find_compiler_path(Fortran)
   endif()
   mark_as_advanced(CMAKE_Fortran_COMPILER)
 
@@ -153,7 +130,7 @@ if(NOT CMAKE_Fortran_COMPILER_ID_RUN)
       ARGS ${CMAKE_Fortran_COMPILER_ID_FLAGS_LIST} -E "\"${CMAKE_ROOT}/Modules/CMakeTestGNU.c\""
       OUTPUT_VARIABLE CMAKE_COMPILER_OUTPUT RETURN_VALUE CMAKE_COMPILER_RETURN)
     if(NOT CMAKE_COMPILER_RETURN)
-      if("${CMAKE_COMPILER_OUTPUT}" MATCHES ".*THIS_IS_GNU.*" )
+      if("${CMAKE_COMPILER_OUTPUT}" MATCHES "THIS_IS_GNU")
         set(CMAKE_Fortran_COMPILER_ID "GNU")
         file(APPEND ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeOutput.log
           "Determining if the Fortran compiler is GNU succeeded with "
@@ -164,10 +141,10 @@ if(NOT CMAKE_Fortran_COMPILER_ID_RUN)
           "the following output:\n${CMAKE_COMPILER_OUTPUT}\n\n")
       endif()
       if(NOT CMAKE_Fortran_PLATFORM_ID)
-        if("${CMAKE_COMPILER_OUTPUT}" MATCHES ".*THIS_IS_MINGW.*" )
+        if("${CMAKE_COMPILER_OUTPUT}" MATCHES "THIS_IS_MINGW")
           set(CMAKE_Fortran_PLATFORM_ID "MinGW")
         endif()
-        if("${CMAKE_COMPILER_OUTPUT}" MATCHES ".*THIS_IS_CYGWIN.*" )
+        if("${CMAKE_COMPILER_OUTPUT}" MATCHES "THIS_IS_CYGWIN")
           set(CMAKE_Fortran_PLATFORM_ID "Cygwin")
         endif()
       endif()

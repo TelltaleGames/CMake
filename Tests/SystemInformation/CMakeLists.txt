@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 2.6)
+cmake_minimum_required (VERSION 3.0)
 project(SystemInformation)
 
 include_directories("This does not exists")
@@ -57,5 +57,3 @@ endforeach()
 get_directory_property(res INCLUDE_REGULAR_EXPRESSION)
 file(APPEND ${CMAKE_CURRENT_BINARY_DIR}/OtherProperties.txt
   "INCLUDE_REGULAR_EXPRESSION: ${res}\n")
-
-

@@ -335,6 +335,7 @@ endif()
 include(${CMAKE_CURRENT_LIST_DIR}/CheckCXXSymbolExists.cmake)
 include(${CMAKE_CURRENT_LIST_DIR}/MacroAddFileDependencies.cmake)
 include(${CMAKE_CURRENT_LIST_DIR}/FindPackageHandleStandardArgs.cmake)
+include(${CMAKE_CURRENT_LIST_DIR}/CMakePushCheckState.cmake)
 
 set(QT_USE_FILE ${CMAKE_ROOT}/Modules/UseQt4.cmake)
 
@@ -613,9 +614,13 @@ if (QT_QMAKE_EXECUTABLE AND QTVERSION)
     set(QT_LIBRARY_DIR ${QT_LIBRARY_DIR_TMP} CACHE INTERNAL "Qt library dir" FORCE)
     set(QT_QTCORE_FOUND 1)
   else()
-    message(WARNING "${QT_QMAKE_EXECUTABLE} reported QT_INSTALL_LIBS as \"${QT_LIBRARY_DIR_TMP}\" "
-                    "but QtCore could not be found there.  "
-                    "Qt is NOT installed correctly for the target build environment.")
+    if(NOT Qt4_FIND_QUIETLY)
+      message(WARNING
+        "${QT_QMAKE_EXECUTABLE} reported QT_INSTALL_LIBS as "
+        "\"${QT_LIBRARY_DIR_TMP}\" "
+        "but QtCore could not be found there.  "
+        "Qt is NOT installed correctly for the target build environment.")
+    endif()
     set(Qt4_FOUND FALSE)
     if(Qt4_FIND_REQUIRED)
       message( FATAL_ERROR "Could NOT find QtCore. Check ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeError.log for more details.")
@@ -747,11 +752,10 @@ if (QT_QMAKE_EXECUTABLE AND QTVERSION)
   # Find out what window system we're using
   #
   #############################################
-  # Save required variable
-  set(CMAKE_REQUIRED_INCLUDES_SAVE ${CMAKE_REQUIRED_INCLUDES})
-  set(CMAKE_REQUIRED_FLAGS_SAVE    ${CMAKE_REQUIRED_FLAGS})
+  cmake_push_check_state()
   # Add QT_INCLUDE_DIR to CMAKE_REQUIRED_INCLUDES
   set(CMAKE_REQUIRED_INCLUDES "${CMAKE_REQUIRED_INCLUDES};${QT_INCLUDE_DIR}")
+  set(CMAKE_REQUIRED_QUIET ${Qt4_FIND_QUIETLY})
   # Check for Window system symbols (note: only one should end up being set)
   CHECK_CXX_SYMBOL_EXISTS(Q_WS_X11 "QtCore/qglobal.h" Q_WS_X11)
   CHECK_CXX_SYMBOL_EXISTS(Q_WS_WIN "QtCore/qglobal.h" Q_WS_WIN)
@@ -771,9 +775,7 @@ if (QT_QMAKE_EXECUTABLE AND QTVERSION)
      endif ()
   endif ()
 
-  # Restore CMAKE_REQUIRED_INCLUDES and CMAKE_REQUIRED_FLAGS variables
-  set(CMAKE_REQUIRED_INCLUDES ${CMAKE_REQUIRED_INCLUDES_SAVE})
-  set(CMAKE_REQUIRED_FLAGS    ${CMAKE_REQUIRED_FLAGS_SAVE})
+  cmake_pop_check_state()
   #
   #############################################
 
@@ -1146,6 +1148,11 @@ if (QT_QMAKE_EXECUTABLE AND QTVERSION)
   _find_qt4_program(QT_QCOLLECTIONGENERATOR_EXECUTABLE Qt4::qcollectiongenerator qcollectiongenerator-qt4 qcollectiongenerator)
   _find_qt4_program(QT_DESIGNER_EXECUTABLE Qt4::designer designer-qt4 designer designer4)
   _find_qt4_program(QT_LINGUIST_EXECUTABLE Qt4::linguist linguist-qt4 linguist linguist4)
+
+  if (NOT TARGET Qt4::qmake)
+    add_executable(Qt4::qmake IMPORTED)
+    set_property(TARGET Qt4::qmake PROPERTY IMPORTED_LOCATION ${QT_QMAKE_EXECUTABLE})
+  endif()
 
   if (QT_MOC_EXECUTABLE)
      set(QT_WRAP_CPP "YES")

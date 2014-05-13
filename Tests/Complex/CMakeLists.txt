@@ -36,7 +36,7 @@ ASSERT(Complex_BINARY_DIR "The PROJECT command is broken")
 #
 macro(TEST_ARGC value1 value2)
   add_definitions(${value1} ${value2})
-  if (${ARGC} MATCHES 4)
+  if (${ARGC} EQUAL 4)
     add_definitions(${ARGV2} ${ARGV3})
   endif ()
 endmacro()
@@ -70,7 +70,7 @@ if(NOT 2.4 EQUAL 2.4)
   message(FATAL_ERROR "Failed: NOT 2.4 EQUAL 2.4")
 endif()
 
-if(CMAKE_SYSTEM MATCHES "OSF1-V.*")
+if(CMAKE_SYSTEM MATCHES "OSF1-V")
   if(NOT CMAKE_COMPILER_IS_GNUCXX)
      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -timplicit_local -no_implicit_include ")
   endif()
@@ -392,6 +392,21 @@ if(NOT RESULT STREQUAL "a[b]c[d]e")
     "string(REGEX REPLACE ... ) test failed (\"${RESULT}\" v. \"a[b]c[d]e\")")
 endif()
 
+#
+# This tests needs Ansi C++98
+#
+set(CMAKE_CXX_STANDARD 98)
+#
+# GNU extensions are needed for stricmp() on Windows.
+#
+set(CMAKE_CXX_EXTENSIONS TRUE)
+
+# Those versions of the HP compiler that need a flag to get proper C++98
+# template support also need a flag to use the newer C++ library.
+if (CMAKE_CXX_COMPILER_ID STREQUAL HP AND
+    CMAKE_CXX98_STANDARD_COMPILE_OPTION STREQUAL "+hpxstd98")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -AA")
+endif ()
 
 #
 # Create the libs and the main exe

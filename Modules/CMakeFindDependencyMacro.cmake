@@ -4,7 +4,7 @@
 #
 # ::
 #
-#     find_dependency(<dep> [<version>])
+#     find_dependency(<dep> [<version> [EXACT]])
 #
 #
 # ``find_dependency()`` wraps a :command:`find_package` call for a package
@@ -29,29 +29,46 @@
 
 macro(find_dependency dep)
   if (NOT ${dep}_FOUND)
-    if (${ARGV1})
-      set(version ${ARGV1})
+    set(cmake_fd_version)
+    if (${ARGC} GREATER 1)
+      if ("${ARGV1}" STREQUAL "")
+        message(FATAL_ERROR "Invalid arguments to find_dependency. VERSION is empty")
+      endif()
+      if ("${ARGV1}" STREQUAL EXACT)
+        message(FATAL_ERROR "Invalid arguments to find_dependency. EXACT may only be specified if a VERSION is specified")
+      endif()
+      set(cmake_fd_version ${ARGV1})
     endif()
-    set(exact_arg)
-    if(${CMAKE_FIND_PACKAGE_NAME}_FIND_VERSION_EXACT)
-      set(exact_arg EXACT)
+    set(cmake_fd_exact_arg)
+    if(${ARGC} GREATER 2)
+      if (NOT "${ARGV2}" STREQUAL EXACT)
+        message(FATAL_ERROR "Invalid arguments to find_dependency")
+      endif()
+      set(cmake_fd_exact_arg EXACT)
     endif()
-    set(quiet_arg)
+    if(${ARGC} GREATER 3)
+      message(FATAL_ERROR "Invalid arguments to find_dependency")
+    endif()
+    set(cmake_fd_quiet_arg)
     if(${CMAKE_FIND_PACKAGE_NAME}_FIND_QUIETLY)
-      set(quiet_arg QUIET)
+      set(cmake_fd_quiet_arg QUIET)
     endif()
-    set(required_arg)
+    set(cmake_fd_required_arg)
     if(${CMAKE_FIND_PACKAGE_NAME}_FIND_REQUIRED)
-      set(required_arg REQUIRED)
+      set(cmake_fd_required_arg REQUIRED)
     endif()
 
-    get_property(alreadyTransitive GLOBAL PROPERTY
+    get_property(cmake_fd_alreadyTransitive GLOBAL PROPERTY
       _CMAKE_${dep}_TRANSITIVE_DEPENDENCY
     )
 
-    find_package(${dep} ${version} ${exact_arg} ${quiet_arg} ${required_arg})
+    find_package(${dep} ${cmake_fd_version}
+        ${cmake_fd_exact_arg}
+        ${cmake_fd_quiet_arg}
+        ${cmake_fd_required_arg}
+    )
 
-    if(NOT DEFINED alreadyTransitive OR alreadyTransitive)
+    if(NOT DEFINED cmake_fd_alreadyTransitive OR cmake_fd_alreadyTransitive)
       set_property(GLOBAL PROPERTY _CMAKE_${dep}_TRANSITIVE_DEPENDENCY TRUE)
     endif()
 
@@ -60,8 +77,9 @@ macro(find_dependency dep)
       set(${CMAKE_FIND_PACKAGE_NAME}_FOUND False)
       return()
     endif()
-    set(required_arg)
-    set(quiet_arg)
-    set(exact_arg)
+    set(cmake_fd_version)
+    set(cmake_fd_required_arg)
+    set(cmake_fd_quiet_arg)
+    set(cmake_fd_exact_arg)
   endif()
 endmacro()
