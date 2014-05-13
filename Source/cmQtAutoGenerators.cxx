@@ -1301,6 +1301,8 @@ bool cmQtAutoGenerators::RunAutogen(cmMakefile* makefile)
       {
       std::cout << "AUTOGEN: Checking " << absFilename << std::endl;
       }
+    if (this->OutMocCppFilename == *it)
+        continue;
     if (this->RelaxedMode)
       {
       this->ParseCppFile(absFilename, headerExtensions, includedMocs,
