@@ -118,11 +118,11 @@ cmGlobalVisualStudio10Generator::cmGlobalVisualStudio10Generator(
     "ProductDir", vc10Express, cmSystemTools::KeyWOW64_32);
   this->MasmEnabled = false;
   this->MSBuildCommandInitialized = false;
-  if( platformName && !strcmp(platformName, "PS3") )
+  if( strcmp(platformName.c_str(), "PS3") == 0 )
   {
       this->PlatformToolset = "SNC";
   }
-  if( platformName && !strcmp(platformName, "PSVita") )
+  if( strcmp(platformName.c_str(), "PSVita") == 0 )
   {
       this->PlatformToolset = "PSVita";
   }
