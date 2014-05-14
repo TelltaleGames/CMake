@@ -37,14 +37,14 @@
 static cmVS7FlagTable const*
 cmVSGetCLFlagTable(cmLocalVisualStudio7Generator* lg)
 {
-  if(lg->GetVersion() >= cmLocalVisualStudioGenerator::VS12)
-    { return cmVS12CLFlagTable; }
   if(lg->GetPlatformName() == "PS3")
     { return cmVS10PS3FlagTable; }
-  else if(lg->GetVersion() == cmLocalVisualStudioGenerator::VS11)
-    { return cmVS11CLFlagTable; }
   if(lg->GetPlatformName() == "PSVita")
     { return cmVS10PSVitaFlagTable; }
+  if(lg->GetVersion() >= cmLocalVisualStudioGenerator::VS12)
+    { return cmVS12CLFlagTable; }
+  else if(lg->GetVersion() == cmLocalVisualStudioGenerator::VS11)
+    { return cmVS11CLFlagTable; }
   else
     { return cmVS10CLFlagTable; }
 }
@@ -289,6 +289,9 @@ void cmVisualStudio10TargetGenerator::Generate()
     (*this->BuildFileStream) << cmVS10EscapeXML(vsGlobalKeyword) <<
       "</Keyword>\n";
     }
+
+  //This seems harmless, and it's required for XBOne.  I can't find any docs on what it actually does.
+  this->WriteString("<ApplicationEnvironment>title</ApplicationEnvironment>\n", 2);
 
   const char* vsGlobalRootNamespace =
     this->Target->GetProperty("VS_GLOBAL_ROOTNAMESPACE");
@@ -1332,6 +1335,16 @@ void cmVisualStudio10TargetGenerator::WritePathAndIncrementalLinkOptions()
           }
       }
 
+      //XBone requires all this nonsense
+      if(this->Platform == "Durango")
+      {
+          this->WriteString("<ReferencePath>$(Console_SdkLibPath);$(Console_SdkWindowsMetadataPath)</ReferencePath>\n", 3);
+          this->WriteString("<LibraryPath>$(Console_SdkLibPath)</LibraryPath>\n", 3);
+          this->WriteString("<LibraryWPath>$(Console_SdkLibPath);$(Console_SdkWindowsMetadataPath)</LibraryWPath>\n", 3);
+          this->WriteString("<IncludePath>$(Console_SdkIncludeRoot)</IncludePath>\n", 3);
+          this->WriteString("<ExecutablePath>$(Console_SdkRoot)bin;$(VCInstallDir)bin\\x86_amd64;$(VCInstallDir)bin;$(WindowsSDK_ExecutablePath_x86);$(VSInstallDir)Common7\\Tools\\bin;$(VSInstallDir)Common7\\tools;$(VSInstallDir)Common7\\ide;$(ProgramFiles)\\HTML Help Workshop;$(MSBuildToolsPath32);$(FxCopDir);$(PATH);</ExecutablePath>\n", 3);
+      }
+
       this->OutputLinkIncremental(*config);
       }
     }
@@ -1783,6 +1796,8 @@ cmVisualStudio10TargetGenerator::WriteLinkOptions(std::string const& config)
     this->WriteString("<ProjectReference>\n", 2);
     this->WriteString(
       "  <LinkLibraryDependencies>false</LinkLibraryDependencies>\n", 2);
+    this->WriteString("<ReferenceOutputAssembly>false"
+                    "</ReferenceOutputAssembly>\n", 3);
     this->WriteString("</ProjectReference>\n", 2);
     }
 }

@@ -163,6 +163,7 @@ static cmVS7FlagTable cmVS11CLFlagTable[] =
 
 
   //Bool Properties
+  {"CompileAsWinRT", "ZW-", "", "false", 0},  //I'm not entirely sure that this flag is valid, but XBone doesn't compile from the command line anyway.
   {"CompileAsWinRT", "ZW", "", "true", 0},
   {"WinRTNoStdLib", "ZW:nostdlib", "", "true", 0},
   {"SuppressStartupBanner", "nologo-", "", "false", 0},

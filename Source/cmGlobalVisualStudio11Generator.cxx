@@ -58,6 +58,11 @@ public:
       return new cmGlobalVisualStudio11Generator(
         genName, "ARM", "");
       }
+    if(strcmp(p, " XBOne") == 0)
+      {
+      return new cmGlobalVisualStudio11Generator(
+        name, "Durango", "CMAKE_FORCE_XBONE");
+      }
 
     if(*p++ != ' ')
       {
@@ -89,6 +94,7 @@ public:
     names.push_back(vs11generatorName);
     names.push_back(vs11generatorName + std::string(" ARM"));
     names.push_back(vs11generatorName + std::string(" Win64"));
+    names.push_back(vs11generatorName + std::string(" XBOne"));
 
     std::set<std::string> installedSDKs =
       cmGlobalVisualStudio11Generator::GetInstalledWindowsCESDKs();
