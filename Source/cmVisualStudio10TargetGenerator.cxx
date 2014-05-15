@@ -1019,6 +1019,12 @@ void cmVisualStudio10TargetGenerator::WriteSource(
       this->WriteString("<FileType>CppForm</FileType>\n", 3);
       this->WriteString("</ClInclude>\n", 2);
     }
+  else if(sf->GetExtension() == "appxmanifest")
+    {
+      (*this->BuildFileStream ) << ">\n";
+      this->WriteString("<FileType>Document</FileType>\n", 3);
+      this->WriteString("</AppxManifest>\n", 2);
+    }
   else
     {
       (*this->BuildFileStream ) << (end? end : " />\n");
@@ -1034,7 +1040,12 @@ void cmVisualStudio10TargetGenerator::WriteSources(
   for(std::vector<cmSourceFile const*>::const_iterator
         si = sources.begin(); si != sources.end(); ++si)
     {
-    this->WriteSource(tool, *si);
+        if((*si)->GetExtension() == "appxmanifest")
+        { this->WriteSource("AppxManifest", *si); }
+        else if((*si)->GetExtension() == "png")
+        { this->WriteSource("Image", *si); }
+        else
+        { this->WriteSource(tool, *si); }
     }
 }
 
@@ -1796,6 +1807,7 @@ cmVisualStudio10TargetGenerator::WriteLinkOptions(std::string const& config)
     this->WriteString("<ProjectReference>\n", 2);
     this->WriteString(
       "  <LinkLibraryDependencies>false</LinkLibraryDependencies>\n", 2);
+    //TODO: This might not always be correct?
     this->WriteString("<ReferenceOutputAssembly>false"
                     "</ReferenceOutputAssembly>\n", 3);
     this->WriteString("</ProjectReference>\n", 2);
@@ -1988,6 +2000,9 @@ void cmVisualStudio10TargetGenerator::WriteProjectReferences()
     (*this->BuildFileStream)
       << this->GlobalGenerator->GetGUID(name.c_str())
       << "</Project>\n";
+    //TODO: This might not always be correct?
+    this->WriteString("<ReferenceOutputAssembly>false"
+                    "</ReferenceOutputAssembly>\n", 3);
     this->WriteString("</ProjectReference>\n", 2);
     }
   this->WriteString("</ItemGroup>\n", 1);
