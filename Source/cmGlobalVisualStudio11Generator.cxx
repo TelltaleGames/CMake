@@ -61,7 +61,7 @@ public:
     if(strcmp(p, " XBOne") == 0)
       {
       return new cmGlobalVisualStudio11Generator(
-        name, "Durango", "CMAKE_FORCE_XBONE");
+        genName, "Durango", "CMAKE_FORCE_XBONE");
       }
 
     if(*p++ != ' ')

@@ -66,17 +66,17 @@ public:
     if(strcmp(p, " XBox 360") == 0)
       {
       return new cmGlobalVisualStudio10Generator(
-        name, "XBox 360", "CMAKE_FORCE_X360");
+        genName, "XBox 360", "CMAKE_FORCE_X360");
       }
     if(strcmp(p, " PS3") == 0)
       {
       return new cmGlobalVisualStudio10Generator(
-        name, "PS3", "CMAKE_FORCE_PS3");
+        genName, "PS3", "CMAKE_FORCE_PS3");
       }
     if(strcmp(p, " PSVita") == 0)
       {
       return new cmGlobalVisualStudio10Generator(
-        name, "PSVita", "CMAKE_FORCE_PSVITA");
+        genName, "PSVita", "CMAKE_FORCE_PSVITA");
       }
     return 0;
     }
