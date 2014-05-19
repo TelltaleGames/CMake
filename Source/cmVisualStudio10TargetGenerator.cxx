@@ -41,6 +41,8 @@ cmVSGetCLFlagTable(cmLocalVisualStudio7Generator* lg)
     { return cmVS10PS3FlagTable; }
   if(lg->GetPlatformName() == "PSVita")
     { return cmVS10PSVitaFlagTable; }
+  if(lg->GetPlatformName() == "ORBIS")
+    { return cmVS10PSVitaFlagTable; }
   if(lg->GetVersion() >= cmLocalVisualStudioGenerator::VS12)
     { return cmVS12CLFlagTable; }
   else if(lg->GetVersion() == cmLocalVisualStudioGenerator::VS11)
