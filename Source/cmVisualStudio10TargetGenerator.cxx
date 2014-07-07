@@ -1356,6 +1356,20 @@ void cmVisualStudio10TargetGenerator::WritePathAndIncrementalLinkOptions()
           this->WriteString("<LibraryWPath>$(Console_SdkLibPath);$(Console_SdkWindowsMetadataPath)</LibraryWPath>\n", 3);
           this->WriteString("<IncludePath>$(Console_SdkIncludeRoot)</IncludePath>\n", 3);
           this->WriteString("<ExecutablePath>$(Console_SdkRoot)bin;$(VCInstallDir)bin\\x86_amd64;$(VCInstallDir)bin;$(WindowsSDK_ExecutablePath_x86);$(VSInstallDir)Common7\\Tools\\bin;$(VSInstallDir)Common7\\tools;$(VSInstallDir)Common7\\ide;$(ProgramFiles)\\HTML Help Workshop;$(MSBuildToolsPath32);$(FxCopDir);$(PATH);</ExecutablePath>\n", 3);
+
+		  const char* pullMappingFile = this->Target->GetProperty("PULL_MAPPING_FILE");
+		  if( pullMappingFile != NULL )
+		  {
+			  this->WritePlatformConfigTag("PullMappingFile", config->c_str(), 3);
+			  *this->BuildFileStream << pullMappingFile << "</PullMappingFile>\n";
+		  }
+
+		  const char* pullTemporaryFolder = this->Target->GetProperty("PULL_TEMPORARY_FOLDER");
+		  if( pullTemporaryFolder != NULL )
+		  {
+			  this->WritePlatformConfigTag("PullTemporaryFolder", config->c_str(), 3);
+			  *this->BuildFileStream << pullTemporaryFolder << "</PullTemporaryFolder>\n";
+		  }
       }
 
       this->OutputLinkIncremental(*config);
