@@ -343,6 +343,7 @@ void cmVisualStudio10TargetGenerator::Generate()
   this->WriteCustomCommands();
   this->WriteAllSources();
   this->WriteDotNetReferences();
+  this->WriteSDKReferences();
   this->WriteEmbeddedResourceGroup();
   this->WriteWinRTReferences();
   this->WriteProjectReferences();
@@ -385,6 +386,27 @@ void cmVisualStudio10TargetGenerator::WriteDotNetReferences()
       }
     this->WriteString("</ItemGroup>\n", 1);
     }
+}
+
+void cmVisualStudio10TargetGenerator::WriteSDKReferences()
+{
+	std::vector<std::string> references;
+	if(const char* vsSDKReferences =
+		this->Target->GetProperty("VS_SDK_REFERENCES"))
+	{
+		cmSystemTools::ExpandListArgument(vsSDKReferences, references);
+	}
+	if(!references.empty())
+	{
+		this->WriteString("<ItemGroup>\n", 1);
+		for(std::vector<std::string>::iterator ri = references.begin();
+			ri != references.end(); ++ri)
+		{
+			this->WriteString("<SDKReference Include=\"", 2);
+			(*this->BuildFileStream) << cmVS10EscapeXML(*ri) << "\"/>\n";
+		}
+		this->WriteString("</ItemGroup>\n", 1);
+	}
 }
 
 void cmVisualStudio10TargetGenerator::WriteEmbeddedResourceGroup()
