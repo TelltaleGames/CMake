@@ -78,6 +78,11 @@ public:
       return new cmGlobalVisualStudio10Generator(
         genName, "PSVita", "CMAKE_FORCE_PSVITA");
       }
+    if(strcmp(p, " PS4") == 0)
+      {
+      return new cmGlobalVisualStudio10Generator(
+        genName, "ORBIS", "CMAKE_FORCE_PS4");
+      }
     return 0;
     }
 
@@ -94,7 +99,8 @@ public:
     names.push_back(vs10generatorName + std::string(" Win64"));
 
     names.push_back(vs10generatorName + std::string(" XBox 360"));
-    names.push_back(vs10generatorName + std::string(" PS3"));    
+    names.push_back(vs10generatorName + std::string(" PS3"));
+    names.push_back(vs10generatorName + std::string(" PS4"));
     names.push_back(vs10generatorName + std::string(" PSVita")); 
     }
 };
