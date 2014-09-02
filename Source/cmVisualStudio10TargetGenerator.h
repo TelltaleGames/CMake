@@ -63,6 +63,7 @@ private:
   void WriteDotNetReferences();
   void WriteSDKReferences();
   void WriteEmbeddedResourceGroup();
+  void WritePRIResources();
   void WriteWinRTReferences();
   void WritePathAndIncrementalLinkOptions();
   void WriteItemDefinitionGroups();
