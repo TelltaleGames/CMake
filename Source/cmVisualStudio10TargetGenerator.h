@@ -61,7 +61,9 @@ private:
                     std::vector<cmSourceFile const*> const&);
   void WriteAllSources();
   void WriteDotNetReferences();
+  void WriteSDKReferences();
   void WriteEmbeddedResourceGroup();
+  void WritePRIResources();
   void WriteWinRTReferences();
   void WritePathAndIncrementalLinkOptions();
   void WriteItemDefinitionGroups();

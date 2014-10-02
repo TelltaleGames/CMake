@@ -400,7 +400,10 @@ cmGlobalVisualStudio8Generator
       }
     bool needsDeploy = (type == cmTarget::EXECUTABLE ||
                         type == cmTarget::SHARED_LIBRARY);
-    if(this->TargetsWindowsCE() && needsDeploy)
+
+	bool xboneDeploy = (this->GetPlatformName() == "Durango") && (type == cmTarget::EXECUTABLE);
+
+    if((this->TargetsWindowsCE() && needsDeploy) || xboneDeploy )
       {
       fout << "\t\t{" << guid << "}." << *i
            << "|" << this->GetPlatformName() << ".Deploy.0 = " << *i << "|"

@@ -345,7 +345,9 @@ void cmVisualStudio10TargetGenerator::Generate()
   this->WriteCustomCommands();
   this->WriteAllSources();
   this->WriteDotNetReferences();
+  this->WriteSDKReferences();
   this->WriteEmbeddedResourceGroup();
+  this->WritePRIResources();
   this->WriteWinRTReferences();
   this->WriteProjectReferences();
   this->WriteString(
@@ -389,6 +391,27 @@ void cmVisualStudio10TargetGenerator::WriteDotNetReferences()
     }
 }
 
+void cmVisualStudio10TargetGenerator::WriteSDKReferences()
+{
+	std::vector<std::string> references;
+	if(const char* vsSDKReferences =
+		this->Target->GetProperty("VS_SDK_REFERENCES"))
+	{
+		cmSystemTools::ExpandListArgument(vsSDKReferences, references);
+	}
+	if(!references.empty())
+	{
+		this->WriteString("<ItemGroup>\n", 1);
+		for(std::vector<std::string>::iterator ri = references.begin();
+			ri != references.end(); ++ri)
+		{
+			this->WriteString("<SDKReference Include=\"", 2);
+			(*this->BuildFileStream) << cmVS10EscapeXML(*ri) << "\"/>\n";
+		}
+		this->WriteString("</ItemGroup>\n", 1);
+	}
+}
+
 void cmVisualStudio10TargetGenerator::WriteEmbeddedResourceGroup()
 {
   std::vector<cmSourceFile const*> resxObjs;
@@ -428,6 +451,30 @@ void cmVisualStudio10TargetGenerator::WriteEmbeddedResourceGroup()
       }
     this->WriteString("</ItemGroup>\n", 1);
     }
+}
+
+void cmVisualStudio10TargetGenerator::WritePRIResources()
+{
+	std::vector<std::string> resources;
+	if(const char* vsPRIResources =
+		this->Target->GetProperty("VS_PRI_RESOURCES"))
+	{
+		cmSystemTools::ExpandListArgument(vsPRIResources, resources);
+	}
+	if(!resources.empty())
+	{
+		this->WriteString("<ItemGroup>\n", 1);
+		for(std::vector<std::string>::iterator ri = resources.begin();
+			ri != resources.end(); ++ri)
+		{
+			this->WriteString("<PRIResource Include=\"", 2);
+			(*this->BuildFileStream) << cmVS10EscapeXML(*ri) << "\">\n";
+			this->WriteString("<SubType>\n", 3);
+			this->WriteString("</SubType>\n", 3);
+			this->WriteString("</PRIResource>\n", 2);
+		}
+		this->WriteString("</ItemGroup>\n", 1);
+	}
 }
 
 void cmVisualStudio10TargetGenerator::WriteWinRTReferences()

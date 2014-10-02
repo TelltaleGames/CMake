@@ -180,7 +180,7 @@ elseif(CMAKE_FORCE_XBONE)
 
   set(_RTC1 "/RTC1")
   set(_FLAGS_CXX " ")
-  set(CMAKE_C_STANDARD_LIBRARIES_INIT "pixEvt.lib d3d11_x.lib combase.lib kernelx.lib uuid.lib")
+  set(CMAKE_C_STANDARD_LIBRARIES_INIT "d3d11_x.lib combase.lib kernelx.lib uuid.lib")
 else()
   set(_PLATFORM_DEFINES "/DWIN32")
 
