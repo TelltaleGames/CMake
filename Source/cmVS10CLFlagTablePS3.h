@@ -34,6 +34,13 @@ static cmVS7FlagTable cmVS10PS3FlagTable[] =
    "FastMath", "false", 0},
   {"FastMath", "fp:fast",
    "FastMath", "true", 0},
+      
+  {"FunctionSections", "ffunction-sections",
+   "Enable function Sections", "true", 0},
+  {"DataSections", "fdata-sections",
+   "Enable data Sections", "true", 0},
+  {"StackCheck", "fstack-check",
+   "Enable stack check", "true", 0},
 
    //MSVC Properties
   {"InlineFunctionExpansion", "",

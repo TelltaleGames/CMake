@@ -308,6 +308,9 @@ static cmVS7FlagTable cmVS10PS3LinkFlagTable[] =
   {"GenerateSnMapFile", "Map",
    "Generate SN Map file", "NormalMapFile", 0},
 
+  {"StackCheck", "fstack-check",
+   "Enable stack check", "true", 0},
+
   //Enum Properties
   {"ShowProgress", "",
    "Not Set", "NotSet", 0},
