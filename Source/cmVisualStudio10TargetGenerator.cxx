@@ -564,7 +564,13 @@ void cmVisualStudio10TargetGenerator::WriteProjectConfigurationValues()
       this->WriteString("<WindowsAppContainer>true"
                         "</WindowsAppContainer>\n", 2);
       }
-
+    if(this->Target->GetProperty("VS_SPURS_USAGE"))
+      {
+          std::string pts = "<SpursUsage>";
+          pts += this->Target->GetProperty("VS_SPURS_USAGE");
+          pts += "</SpursUsage>\n";
+          this->WriteString(pts.c_str(), 2);
+      }
     if(this->Platform == "PS3" && this->ClOptions[*i])
       {
       bool bRTTI = this->ClOptions[*i]->UsingRTTI();
