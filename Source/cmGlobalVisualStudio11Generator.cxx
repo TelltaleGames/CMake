@@ -63,6 +63,11 @@ public:
       return new cmGlobalVisualStudio11Generator(
         genName, "Durango", "CMAKE_FORCE_XBONE");
       }
+	if(strcmp(p, " PS4") == 0)
+	{
+		return new cmGlobalVisualStudio11Generator(
+			genName, "ORBIS", "CMAKE_FORCE_PS4");
+	}
 
     if(*p++ != ' ')
       {
@@ -95,6 +100,7 @@ public:
     names.push_back(vs11generatorName + std::string(" ARM"));
     names.push_back(vs11generatorName + std::string(" Win64"));
     names.push_back(vs11generatorName + std::string(" XBOne"));
+	names.push_back(vs11generatorName + std::string(" PS4"));
 
     std::set<std::string> installedSDKs =
       cmGlobalVisualStudio11Generator::GetInstalledWindowsCESDKs();
