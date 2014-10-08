@@ -90,6 +90,7 @@ private:
   bool OutputSourceSpecificFlags(cmSourceFile const* source);
   void AddLibraries(cmComputeLinkInformation& cli, std::string& libstring);
   void WriteLibOptions(std::string const& config);
+  void WriteXbox360Options();
   void WriteEvents(std::string const& configName);
   void WriteEvent(const char* name,
                   std::vector<cmCustomCommand> const& commands,

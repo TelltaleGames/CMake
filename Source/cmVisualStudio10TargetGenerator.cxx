@@ -1663,6 +1663,43 @@ cmVisualStudio10TargetGenerator::WriteLibOptions(std::string const& config)
     }
 }
 
+void cmVisualStudio10TargetGenerator::WriteXbox360Options()
+{
+	if(this->Platform == "XBox 360")
+	{
+		// Deploy Options
+		this->WriteString("<Deploy>\n", 2);
+
+		const char* deploymentType = this->Target->GetProperty("DEPLOYMENT_TYPE");
+		if( deploymentType != NULL )
+		{
+			this->WriteString("<DeploymentType>",3);
+			*this->BuildFileStream << deploymentType << "</DeploymentType>\n";
+		}
+
+		this->WriteString("</Deploy>\n", 2);
+
+		// ImageXex Options
+		this->WriteString("<ImageXex>\n", 2);
+
+		const char* imageXexTitleId = this->Target->GetProperty("IMAGEXEX_TITLE_ID");
+		if( imageXexTitleId != NULL )
+		{
+			this->WriteString("<TitleID>",3);
+			*this->BuildFileStream << imageXexTitleId << "</TitleID>\n";
+		}
+
+		const char* imageXexConfigFile = this->Target->GetProperty("IMAGEXEX_CONFIG_FILE");
+		if( imageXexConfigFile != NULL )
+		{
+			this->WriteString("<ConfigurationFile>",3);
+			*this->BuildFileStream << imageXexConfigFile << "</ConfigurationFile>\n";
+		}
+
+		this->WriteString("</ImageXex>\n", 2);
+	}
+}
+
 //----------------------------------------------------------------------------
 bool cmVisualStudio10TargetGenerator::ComputeLinkOptions()
 {
@@ -1974,6 +2011,9 @@ void cmVisualStudio10TargetGenerator::WriteItemDefinitionGroups()
     this->WriteLinkOptions(*i);
     //    output lib flags       <Lib></Lib>
     this->WriteLibOptions(*i);
+
+	this->WriteXbox360Options();
+
     this->WriteString("</ItemDefinitionGroup>\n", 1);
     }
 }
