@@ -1399,6 +1399,13 @@ void cmVisualStudio10TargetGenerator::WritePathAndIncrementalLinkOptions()
                 targetNameFull.c_str()) << ".xex" 
             << "</ImageXexOutput>\n";
           }
+
+		  const char* deploymentRoot = this->Target->GetProperty("DEPLOYMENT_ROOT");
+		  if( deploymentRoot != NULL )
+		  {
+			  this->WritePlatformConfigTag("RemoteRoot", config->c_str(), 3);
+			  *this->BuildFileStream << deploymentRoot << "</RemoteRoot>\n";
+		  }
       }
 
       //XBone requires all this nonsense
