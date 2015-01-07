@@ -1703,6 +1703,13 @@ void cmVisualStudio10TargetGenerator::WriteXbox360Options()
 			*this->BuildFileStream << imageXexConfigFile << "</ConfigurationFile>\n";
 		}
 
+		const char* imageXexWorkspaceSize = this->Target->GetProperty("IMAGEXEX_WORKSPACE_SIZE");
+		if( imageXexWorkspaceSize != NULL )
+		{
+			this->WriteString("<WorkspaceSize>",3);
+			*this->BuildFileStream << imageXexWorkspaceSize << "</WorkspaceSize>\n";
+		}
+
 		this->WriteString("</ImageXex>\n", 2);
 	}
 }
