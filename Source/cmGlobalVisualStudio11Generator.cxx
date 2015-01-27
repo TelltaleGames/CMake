@@ -68,6 +68,11 @@ public:
 		return new cmGlobalVisualStudio11Generator(
 			genName, "ORBIS", "CMAKE_FORCE_PS4");
 	}
+	if(strcmp(p, " WiiU") == 0)
+	{
+		return new cmGlobalVisualStudio11Generator(
+			genName, "Cafe", "CMAKE_FORCE_WIIU");
+	}
 
     if(*p++ != ' ')
       {
@@ -101,6 +106,7 @@ public:
     names.push_back(vs11generatorName + std::string(" Win64"));
     names.push_back(vs11generatorName + std::string(" XBOne"));
 	names.push_back(vs11generatorName + std::string(" PS4"));
+	names.push_back(vs11generatorName + std::string(" WiiU"));
 
     std::set<std::string> installedSDKs =
       cmGlobalVisualStudio11Generator::GetInstalledWindowsCESDKs();
