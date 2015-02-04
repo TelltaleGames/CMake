@@ -132,10 +132,6 @@ cmGlobalVisualStudio10Generator::cmGlobalVisualStudio10Generator(
   {
       this->PlatformToolset = "PSVita";
   }
-  if( strcmp(platformName.c_str(), "Cafe") == 0 )
-  {
-	  this->PlatformToolset = "CafeSDK2.12.04";
-  }
 }
 
 //----------------------------------------------------------------------------

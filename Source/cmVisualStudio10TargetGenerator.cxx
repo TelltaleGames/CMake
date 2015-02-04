@@ -1907,6 +1907,27 @@ cmVisualStudio10TargetGenerator::ComputeLinkOptions(std::string const& config)
 }
 
 //----------------------------------------------------------------------------
+void cmVisualStudio10TargetGenerator::WritePreLinkOptions(std::string const& config)
+{
+	if(this->Target->GetType() == cmTarget::STATIC_LIBRARY || this->Target->GetType() > cmTarget::MODULE_LIBRARY)
+	{
+		return;
+	}
+
+	this->WriteString("<PreLink>\n", 2);
+
+	const char* defFile = this->Target->GetProperty("PRELINK_DEF_FILE");
+	if( defFile != NULL )
+	{
+		// Deploy Options
+		this->WriteString("<DEFFile>",3);
+		*this->BuildFileStream << defFile << "</DEFFile>\n";
+	}
+
+	this->WriteString("</PreLink>\n", 2);
+}
+
+//----------------------------------------------------------------------------
 void
 cmVisualStudio10TargetGenerator::WriteLinkOptions(std::string const& config)
 {
@@ -2021,6 +2042,8 @@ void cmVisualStudio10TargetGenerator::WriteItemDefinitionGroups()
     this->WriteMidlOptions(*i, includes);
     // write events
     this->WriteEvents(*i);
+	//    output prelink flags    <PreLink></PreLink>
+	this->WritePreLinkOptions(*i);
     //    output link flags       <Link></Link>
     this->WriteLinkOptions(*i);
     //    output lib flags       <Lib></Lib>
