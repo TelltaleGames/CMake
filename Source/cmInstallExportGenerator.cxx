@@ -32,10 +32,11 @@ cmInstallExportGenerator::cmInstallExportGenerator(
   const char* file_permissions,
   std::vector<std::string> const& configurations,
   const char* component,
+  MessageLevel message,
   const char* filename, const char* name_space,
   bool exportOld,
   cmMakefile* mf)
-  :cmInstallGenerator(destination, configurations, component)
+  :cmInstallGenerator(destination, configurations, component, message)
   ,ExportSet(exportSet)
   ,FilePermissions(file_permissions)
   ,FileName(filename)
@@ -120,7 +121,7 @@ void cmInstallExportGenerator::GenerateScript(std::ostream& os)
   // Skip empty sets.
   if(ExportSet->GetTargetExports()->empty())
     {
-    cmOStringStream e;
+    std::ostringstream e;
     e << "INSTALL(EXPORT) given unknown export \""
       << ExportSet->GetName() << "\"";
     cmSystemTools::Error(e.str().c_str());

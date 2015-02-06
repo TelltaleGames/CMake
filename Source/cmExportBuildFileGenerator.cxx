@@ -18,6 +18,7 @@
 
 //----------------------------------------------------------------------------
 cmExportBuildFileGenerator::cmExportBuildFileGenerator()
+  : Backtrace(NULL)
 {
   this->Makefile = 0;
   this->ExportSet = 0;
@@ -44,7 +45,7 @@ bool cmExportBuildFileGenerator::GenerateMainFile(std::ostream& os)
       }
     else
       {
-      cmOStringStream e;
+      std::ostringstream e;
       e << "given target \"" << te->GetName() << "\" more than once.";
       this->Makefile->GetCMakeInstance()
           ->IssueMessage(cmake::FATAL_ERROR, e.str(), this->Backtrace);
@@ -67,6 +68,16 @@ bool cmExportBuildFileGenerator::GenerateMainFile(std::ostream& os)
       tei != this->Exports.end(); ++tei)
     {
     cmTarget* te = *tei;
+    if (te->GetProperty("INTERFACE_SOURCES"))
+      {
+      std::ostringstream e;
+      e << "Target \""
+        << te->GetName()
+        << "\" has a populated INTERFACE_SOURCES property.  This is not "
+          "currently supported.";
+      cmSystemTools::Error(e.str().c_str());
+      return false;
+      }
     this->GenerateImportTargetCode(os, te);
 
     te->AppendBuildInterfaceIncludes();
@@ -302,7 +313,7 @@ cmExportBuildFileGenerator
     return;
     }
 
-  cmOStringStream e;
+  std::ostringstream e;
   e << "export called with target \"" << depender->GetName()
     << "\" which requires target \"" << dependee->GetName() << "\" ";
   if (occurrences == 0)

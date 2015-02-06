@@ -27,6 +27,8 @@ public:
   enum Tool
   {
     Compiler,
+    ResourceCompiler,
+    MasmCompiler,
     Linker,
     FortranCompiler
   };
@@ -35,6 +37,13 @@ public:
                                  cmVS7FlagTable const* table,
                                  cmVS7FlagTable const* extraTable = 0,
                                  cmVisualStudio10TargetGenerator* g = 0);
+
+  cmVisualStudioGeneratorOptions(cmLocalVisualStudioGenerator* lg,
+                                 Tool tool,
+                                 cmVisualStudio10TargetGenerator* g = 0);
+
+  // Add a table of flags.
+  void AddTable(cmVS7FlagTable const* table);
 
   // Store options from command line flags.
   void Parse(const char* flags);
@@ -53,6 +62,7 @@ public:
   bool UsingExceptions();
 
   bool IsDebug() const;
+  bool IsWinRt() const;
   // Write options to output.
   void OutputPreprocessorDefinitions(std::ostream& fout,
                                      const char* prefix,

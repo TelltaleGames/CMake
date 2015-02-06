@@ -23,6 +23,7 @@ class cmCustomCommand;
 class cmLocalVisualStudio7Generator;
 class cmComputeLinkInformation;
 class cmVisualStudioGeneratorOptions;
+struct cmIDEFlagTable;
 #include "cmSourceGroup.h"
 
 class cmVisualStudio10TargetGenerator
@@ -55,9 +56,13 @@ private:
   void WriteString(const char* line, int indentLevel);
   void WriteProjectConfigurations();
   void WriteProjectConfigurationValues();
-  void WriteSource(const char* tool, cmSourceFile const* sf,
+  void WriteMSToolConfigurationValues(std::string const& config);
+  void WriteHeaderSource(cmSourceFile const* sf);
+  void WriteExtraSource(cmSourceFile const* sf);
+  void WriteNsightTegraConfigurationValues(std::string const& config);
+  void WriteSource(std::string const& tool, cmSourceFile const* sf,
                    const char* end = 0);
-  void WriteSources(const char* tool,
+  void WriteSources(std::string const& tool,
                     std::vector<cmSourceFile const*> const&);
   void WriteAllSources();
   void WriteDotNetReferences();
@@ -65,22 +70,37 @@ private:
   void WriteEmbeddedResourceGroup();
   void WritePRIResources();
   void WriteWinRTReferences();
+  void WriteWinRTPackageCertificateKeyFile();
   void WritePathAndIncrementalLinkOptions();
   void WriteItemDefinitionGroups();
+  void VerifyNecessaryFiles();
+  void WriteMissingFiles();
+  void WriteMissingFilesWP80();
+  void WriteMissingFilesWP81();
+  void WriteMissingFilesWS80();
+  void WriteMissingFilesWS81();
+  void WriteCommonMissingFiles(const std::string& manifestFile);
+  void WriteTargetSpecificReferences();
 
   bool ComputeClOptions();
   bool ComputeClOptions(std::string const& configName);
   void WriteClOptions(std::string const& config,
                       std::vector<std::string> const & includes);
+  bool ComputeRcOptions();
+  bool ComputeRcOptions(std::string const& config);
   void WriteRCOptions(std::string const& config,
                       std::vector<std::string> const & includes);
+  bool ComputeMasmOptions();
+  bool ComputeMasmOptions(std::string const& config);
+  void WriteMasmOptions(std::string const& config,
+                        std::vector<std::string> const& includes);
   bool ComputeLinkOptions();
   bool ComputeLinkOptions(std::string const& config);
   void WritePreLinkOptions(std::string const& config);
   void WriteLinkOptions(std::string const& config);
   void WriteMidlOptions(std::string const& config,
                         std::vector<std::string> const & includes);
-  void OutputIncludes(std::vector<std::string> const & includes);
+  void WriteAntBuildOptions(std::string const& config);
   void OutputLinkIncremental(std::string const& configName);
   void WriteCustomRule(cmSourceFile const* source,
                        cmCustomCommand const & command);
@@ -88,8 +108,10 @@ private:
   void WriteCustomCommand(cmSourceFile const* sf);
   void WriteGroups();
   void WriteProjectReferences();
+  void WriteApplicationTypeSettings();
   bool OutputSourceSpecificFlags(cmSourceFile const* source);
-  void AddLibraries(cmComputeLinkInformation& cli, std::string& libstring);
+  void AddLibraries(cmComputeLinkInformation& cli,
+                    std::vector<std::string>& libVec);
   void WriteLibOptions(std::string const& config);
   void WriteXbox360Options();
   void WriteEvents(std::string const& configName);
@@ -102,10 +124,18 @@ private:
                               const std::vector<cmSourceGroup>& allGroups);
   bool IsResxHeader(const std::string& headerFile);
 
+  cmIDEFlagTable const* GetClFlagTable() const;
+  cmIDEFlagTable const* GetRcFlagTable() const;
+  cmIDEFlagTable const* GetLibFlagTable() const;
+  cmIDEFlagTable const* GetLinkFlagTable() const;
+  cmIDEFlagTable const* GetMasmFlagTable() const;
+
 private:
   typedef cmVisualStudioGeneratorOptions Options;
   typedef std::map<std::string, Options*> OptionsMap;
   OptionsMap ClOptions;
+  OptionsMap RcOptions;
+  OptionsMap MasmOptions;
   OptionsMap LinkOptions;
   std::string PathToVcxproj;
   cmTarget* Target;
@@ -114,10 +144,17 @@ private:
   std::string Platform;
   std::string GUID;
   std::string Name;
+  bool MSTools;
+  bool NsightTegra;
+  int  NsightTegraVersion[4];
+  bool TargetCompileAsWinRT;
   cmGlobalVisualStudio10Generator* GlobalGenerator;
   cmGeneratedFileStream* BuildFileStream;
   cmLocalVisualStudio7Generator* LocalGenerator;
   std::set<cmSourceFile const*> SourcesVisited;
+  bool IsMissingFiles;
+  std::vector<std::string> AddedFiles;
+  std::string DefaultArtifactDir;
 
   typedef std::map<std::string, ToolSources> ToolSourceMap;
   ToolSourceMap Tools;

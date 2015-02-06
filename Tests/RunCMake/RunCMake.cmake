@@ -25,6 +25,13 @@ function(run_cmake test)
       unset(expect_std${o})
     endif()
   endforeach()
+  if (NOT expect_stderr)
+    if (NOT RunCMake_DEFAULT_stderr)
+      set(RunCMake_DEFAULT_stderr "^$")
+    endif()
+    set(expect_stderr ${RunCMake_DEFAULT_stderr})
+  endif()
+
   if (NOT RunCMake_TEST_SOURCE_DIR)
     set(RunCMake_TEST_SOURCE_DIR "${top_src}")
   endif()
@@ -38,11 +45,11 @@ function(run_cmake test)
   if(NOT DEFINED RunCMake_TEST_OPTIONS)
     set(RunCMake_TEST_OPTIONS "")
   endif()
-  if (NOT RunCMake_TEST_FILE)
-    set(RunCMake_TEST_FILE "${test}")
-  endif()
   if(APPLE)
     list(APPEND RunCMake_TEST_OPTIONS -DCMAKE_POLICY_DEFAULT_CMP0025=NEW)
+  endif()
+  if(RunCMake_MAKE_PROGRAM)
+    list(APPEND RunCMake_TEST_OPTIONS "-DCMAKE_MAKE_PROGRAM=${RunCMake_MAKE_PROGRAM}")
   endif()
   if(RunCMake_TEST_COMMAND)
     execute_process(
@@ -56,8 +63,9 @@ function(run_cmake test)
     execute_process(
       COMMAND ${CMAKE_COMMAND} "${RunCMake_TEST_SOURCE_DIR}"
                 -G "${RunCMake_GENERATOR}"
+                -A "${RunCMake_GENERATOR_PLATFORM}"
                 -T "${RunCMake_GENERATOR_TOOLSET}"
-                -DRunCMake_TEST=${RunCMake_TEST_FILE}
+                -DRunCMake_TEST=${test}
                 --no-warn-unused-cli
                 ${RunCMake_TEST_OPTIONS}
       WORKING_DIRECTORY "${RunCMake_TEST_BINARY_DIR}"
@@ -67,10 +75,11 @@ function(run_cmake test)
       )
   endif()
   set(msg "")
-  if(NOT "${actual_result}" STREQUAL "${expect_result}")
+  if(NOT "${actual_result}" MATCHES "${expect_result}")
     set(msg "${msg}Result is [${actual_result}], not [${expect_result}].\n")
   endif()
   foreach(o out err)
+    string(REGEX REPLACE "\r\n" "\n" actual_std${o} "${actual_std${o}}")
     string(REGEX REPLACE "(^|\n)(==[0-9]+==[^\n]*\n)+" "\\1" actual_std${o} "${actual_std${o}}")
     string(REGEX REPLACE "\n+$" "" actual_std${o} "${actual_std${o}}")
     set(expect_${o} "")
@@ -87,6 +96,10 @@ function(run_cmake test)
   include(${top_src}/${test}-check.cmake OPTIONAL)
   if(RunCMake_TEST_FAILED)
     set(msg "${RunCMake_TEST_FAILED}\n${msg}")
+  endif()
+  if(msg AND RunCMake_TEST_COMMAND)
+    string(REPLACE ";" "\" \"" command "\"${RunCMake_TEST_COMMAND}\"")
+    set(msg "${msg}Command was:\n command> ${command}\n")
   endif()
   if(msg)
     string(REGEX REPLACE "\n" "\n actual-out> " actual_out " actual-out> ${actual_stdout}")

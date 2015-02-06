@@ -42,7 +42,7 @@ public:
 
   std::string GetTargetName() const;
 
-  bool needsDepFile(const std::string& lang);
+  bool NeedDepTypeMSVC(const std::string& lang) const;
 
 protected:
 
@@ -114,8 +114,8 @@ protected:
   void WriteLanguageRules(const std::string& language);
   void WriteCompileRule(const std::string& language);
   void WriteObjectBuildStatements();
-  void WriteObjectBuildStatement(cmSourceFile const* source);
-  void WriteCustomCommandBuildStatement(cmCustomCommand *cc);
+  void WriteObjectBuildStatement(cmSourceFile const* source,
+                                 bool writeOrderDependsTargetForTarget);
 
   cmNinjaDeps GetObjects() const
   { return this->Objects; }

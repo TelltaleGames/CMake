@@ -7,7 +7,11 @@ If this property is set to ``ON``, then the value of the
 :prop_tgt:`CXX_STANDARD` target property is treated as a requirement.  If this
 property is ``OFF`` or unset, the :prop_tgt:`CXX_STANDARD` target property is
 treated as optional and may "decay" to a previous standard if the requested is
-not available.
+not available.  For compilers that have no notion of a standard level, such as
+MSVC, this has no effect.
+
+See the :manual:`cmake-compile-features(7)` manual for information on
+compile features.
 
 This property is initialized by the value of
 the :variable:`CMAKE_CXX_STANDARD_REQUIRED` variable if it is set when a

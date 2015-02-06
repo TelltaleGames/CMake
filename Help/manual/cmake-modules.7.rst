@@ -3,7 +3,7 @@
 cmake-modules(7)
 ****************
 
-.. only:: html or latex
+.. only:: html
 
    .. contents::
 
@@ -23,6 +23,7 @@ All Modules
    /module/CheckCXXSourceRuns
    /module/CheckCXXSymbolExists
    /module/CheckFortranFunctionExists
+   /module/CheckFortranSourceCompiles
    /module/CheckFunctionExists
    /module/CheckIncludeFileCXX
    /module/CheckIncludeFile
@@ -55,12 +56,14 @@ All Modules
    /module/CPackCygwin
    /module/CPackDeb
    /module/CPackDMG
+   /module/CPackIFW
    /module/CPackNSIS
    /module/CPackPackageMaker
    /module/CPackRPM
    /module/CPack
    /module/CPackWIX
    /module/CTest
+   /module/CTestCoverageCollectGCOV
    /module/CTestScriptMode
    /module/CTestUseLaunchers
    /module/Dart
@@ -106,6 +109,7 @@ All Modules
    /module/FindGLUT
    /module/FindGnuplot
    /module/FindGnuTLS
+   /module/FindGSL
    /module/FindGTest
    /module/FindGTK2
    /module/FindGTK
@@ -113,13 +117,16 @@ All Modules
    /module/FindHg
    /module/FindHSPELL
    /module/FindHTMLHelp
+   /module/FindIce
    /module/FindIcotool
    /module/FindImageMagick
+   /module/FindIntl
    /module/FindITK
    /module/FindJasper
    /module/FindJava
    /module/FindJNI
    /module/FindJPEG
+   /module/FindJsonCpp
    /module/FindKDE3
    /module/FindKDE4
    /module/FindLAPACK
@@ -205,6 +212,7 @@ All Modules
    /module/FindWish
    /module/FindwxWidgets
    /module/FindwxWindows
+   /module/FindXercesC
    /module/FindX11
    /module/FindXMLRPC
    /module/FindZLIB
@@ -232,3 +240,4 @@ All Modules
    /module/UsewxWidgets
    /module/Use_wxWindows
    /module/WriteBasicConfigVersionFile
+   /module/WriteCompilerDetectionHeader
