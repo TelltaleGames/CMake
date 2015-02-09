@@ -290,6 +290,7 @@ bool cmGlobalVisualStudio7Generator::SetGeneratorPlatform(std::string const& p,
     {
     mf->AddDefinition("CMAKE_FORCE_IA64", "TRUE");
     }
+
   mf->AddDefinition("CMAKE_VS_PLATFORM_NAME", this->GetPlatformName().c_str());
   return this->cmGlobalVisualStudioGenerator::SetGeneratorPlatform(p, mf);
 }

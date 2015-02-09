@@ -47,11 +47,11 @@
 
 cmIDEFlagTable const* cmVisualStudio10TargetGenerator::GetClFlagTable() const
 {
-  if(lg->GetPlatformName() == "PS3")
+  if(this->GlobalGenerator->GetPlatformName() == "PS3")
     { return cmVS10PS3FlagTable; }
-  if(lg->GetPlatformName() == "PSVita")
+  if(this->GlobalGenerator->GetPlatformName() == "PSVita")
     { return cmVS10PSVitaFlagTable; }
-  if(lg->GetPlatformName() == "ORBIS")
+  if(this->GlobalGenerator->GetPlatformName() == "ORBIS")
     { return cmVS10PSVitaFlagTable; }
 
   if(this->MSTools)
@@ -90,7 +90,7 @@ cmIDEFlagTable const* cmVisualStudio10TargetGenerator::GetRcFlagTable() const
 
 cmIDEFlagTable const* cmVisualStudio10TargetGenerator::GetLibFlagTable() const
 {
-  if(lg->GetPlatformName() == "PS3")
+  if(this->GlobalGenerator->GetPlatformName() == "PS3")
     { return cmVS10PS3LinkFlagTable; }
 
   if(this->MSTools)
@@ -761,7 +761,7 @@ void cmVisualStudio10TargetGenerator::WriteProjectConfigurationValues()
       pts += "</PlatformToolset>\n";
       this->WriteString(pts.c_str(), 2);
       }
-    else if(const char* toolset = gg->GetPlatformToolset())
+    else if(const char* toolset = this->GlobalGenerator->GetPlatformToolset())
       {
       std::string pts = "<PlatformToolset>";
       pts += toolset;
@@ -1526,8 +1526,7 @@ void cmVisualStudio10TargetGenerator::WriteSource(
   this->ConvertToWindowsSlash(sourceFile);
   this->WriteString("<", 2);
   (*this->BuildFileStream ) << tool << " Include=\""
-                            << cmVS10EscapeXML(sourceFile) << "\""
-                            << (end? end : " />\n");
+                            << cmVS10EscapeXML(sourceFile) << "\"";
 
   if(sf->GetExtension() == "h" &&
     this->IsResxHeader(sf->GetFullPath()))
@@ -2492,14 +2491,6 @@ cmVisualStudio10TargetGenerator::ComputeLinkOptions(std::string const& config)
     flags += " ";
     flags += flagsConfig;
     }
-  if ( this->Target->GetPropertyAsBool("WIN32_EXECUTABLE") )
-    {
-    linkOptions.AddFlag("SubSystem", "Windows");
-    }
-  else if(this->Platform != "XBox 360")
-    {
-    linkOptions.AddFlag("SubSystem", "Console");
-    }
   std::string standardLibsVar = "CMAKE_";
   standardLibsVar += linkLanguage;
   standardLibsVar += "_STANDARD_LIBRARIES";
@@ -2611,7 +2602,7 @@ cmVisualStudio10TargetGenerator::ComputeLinkOptions(std::string const& config)
             }
           }
         }
-      else
+      else if(this->Platform != "XBox 360")
         {
         linkOptions.AddFlag("SubSystem", "Console");
         };

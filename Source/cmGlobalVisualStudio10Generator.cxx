@@ -65,25 +65,25 @@ public:
       return new cmGlobalVisualStudio10Generator(
         genName, "Itanium");
       }
-    if(strcmp(p, " XBox 360") == 0)
+    if(strcmp(p, "XBox 360") == 0)
       {
       return new cmGlobalVisualStudio10Generator(
-        genName, "XBox 360", "CMAKE_FORCE_X360");
+        genName, "XBox 360");
       }
-    if(strcmp(p, " PS3") == 0)
+    if(strcmp(p, "PS3") == 0)
       {
       return new cmGlobalVisualStudio10Generator(
-        genName, "PS3", "CMAKE_FORCE_PS3");
+        genName, "PS3");
       }
-    if(strcmp(p, " PSVita") == 0)
+    if(strcmp(p, "PSVita") == 0)
       {
       return new cmGlobalVisualStudio10Generator(
-        genName, "PSVita", "CMAKE_FORCE_PSVITA");
+        genName, "PSVita");
       }
-    if(strcmp(p, " PS4") == 0)
+    if(strcmp(p, "PS4") == 0)
       {
       return new cmGlobalVisualStudio10Generator(
-        genName, "ORBIS", "CMAKE_FORCE_PS4");
+        genName, "ORBIS");
       }
     return 0;
     }
@@ -128,11 +128,11 @@ cmGlobalVisualStudio10Generator::cmGlobalVisualStudio10Generator(
   this->MSBuildCommandInitialized = false;
   if( strcmp(platformName.c_str(), "PS3") == 0 )
   {
-      this->PlatformToolset = "SNC";
+      this->DefaultPlatformToolset = "SNC";
   }
   if( strcmp(platformName.c_str(), "PSVita") == 0 )
   {
-      this->PlatformToolset = "PSVita";
+      this->DefaultPlatformToolset = "PSVita";
   }
 }
 

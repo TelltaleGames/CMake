@@ -156,6 +156,30 @@ void cmGlobalVisualStudio8Generator::AddPlatformDefinitions(cmMakefile* mf)
     mf->AddDefinition("CMAKE_VS_WINCE_VERSION",
       this->WindowsCEVersion.c_str());
   }
+  else if(this->GetPlatformName() == "XBox 360")
+  {
+	  mf->AddDefinition("CMAKE_FORCE_X360", "TRUE");
+  }
+  else if(this->GetPlatformName() == "PS3")
+  {
+	  mf->AddDefinition("CMAKE_FORCE_PS3", "TRUE");
+  }
+  else if(this->GetPlatformName() == "PSVita")
+  {
+	  mf->AddDefinition("CMAKE_FORCE_PSVITA", "TRUE");
+  }
+  else if(this->GetPlatformName() == "Durango")
+  {
+	  mf->AddDefinition("CMAKE_FORCE_XBONE", "TRUE");
+  }
+  else if(this->GetPlatformName() == "ORBIS")
+  {
+	  mf->AddDefinition("CMAKE_FORCE_PS4", "TRUE");
+  }
+  else if(this->GetPlatformName() == "Cafe")
+  {
+	  mf->AddDefinition("CMAKE_FORCE_WIIU", "TRUE");
+  }
 }
 
 //----------------------------------------------------------------------------
