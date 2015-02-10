@@ -2530,6 +2530,23 @@ cmVisualStudio10TargetGenerator::ComputeLinkOptions(std::string const& config)
 
   std::vector<std::string> const& ldirs = cli.GetDirectories();
   std::vector<std::string> linkDirs;
+
+  if( this->Platform == "Cafe")
+  {
+	  std::string cafeLibPath = "$(CAFE_ROOT)\\system\\lib\\ghs\\cafe\\";
+	  cmTarget::LinkLibraryType libType = this->Target->ComputeLinkType( config );
+	  if( libType == cmTarget::DEBUG )
+	  {
+		  cafeLibPath += "DEBUG";
+	  }
+	  else
+	  {
+		  cafeLibPath += "NDEBUG";
+	  }
+
+	  linkDirs.push_back(cafeLibPath);
+  }
+
   for(std::vector<std::string>::const_iterator d = ldirs.begin();
       d != ldirs.end(); ++d)
     {
