@@ -535,17 +535,12 @@ void cmLocalGenerator::GenerateInstallRules()
       "${CMAKE_INSTALL_COMPONENT}.txt\")\n"
       "else()\n"
       "  set(CMAKE_INSTALL_MANIFEST \"install_manifest.txt\")\n"
-      "endif()\n\n";
-    fout
-      << "file(WRITE \""
-      << homedir << "/${CMAKE_INSTALL_MANIFEST}\" "
-      << "\"\")" << std::endl;
-    fout
-      << "foreach(file ${CMAKE_INSTALL_MANIFEST_FILES})" << std::endl
-      << "  file(APPEND \""
-      << homedir << "/${CMAKE_INSTALL_MANIFEST}\" "
-      << "\"${file}\\n\")" << std::endl
-      << "endforeach()" << std::endl;
+      "endif()\n"
+      "\n"
+      "string(REPLACE \";\" \"\\n\" CMAKE_INSTALL_MANIFEST_CONTENT\n"
+      "       \"${CMAKE_INSTALL_MANIFEST_FILES}\")\n"
+      "file(WRITE \"" << homedir << "/${CMAKE_INSTALL_MANIFEST}\"\n"
+      "     \"${CMAKE_INSTALL_MANIFEST_CONTENT}\")\n";
     }
 }
 
@@ -2270,7 +2265,14 @@ AddCompilerRequirementFlag(std::string &flags, cmTarget* target,
 
   std::vector<std::string>::const_iterator stdIt =
                                 std::find(stds.begin(), stds.end(), standard);
-  assert(stdIt != stds.end());
+  if (stdIt == stds.end())
+    {
+    std::string e =
+      lang + "_STANDARD is set to invalid value '" + standard + "'";
+    this->GetGlobalGenerator()->GetCMakeInstance()
+      ->IssueMessage(cmake::FATAL_ERROR, e, target->GetBacktrace());
+    return;
+    }
 
   std::vector<std::string>::const_iterator defaultStdIt =
     std::find(stds.begin(), stds.end(), defaultStd);
