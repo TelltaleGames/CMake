@@ -2742,6 +2742,28 @@ cmVisualStudio10TargetGenerator::WriteLinkOptions(std::string const& config)
     }
 }
 
+//----------------------------------------------------------------------------
+void cmVisualStudio10TargetGenerator::WritePostLinkOptions(std::string const& config)
+{
+	if(this->Target->GetType() == cmTarget::STATIC_LIBRARY || this->Target->GetType() > cmTarget::MODULE_LIBRARY)
+	{
+		return;
+	}
+
+	this->WriteString("<PostLink>\n", 2);
+
+	const char* loaderTag = this->Target->GetProperty("POSTLINK_LOADER_TAG");
+	if( loaderTag != NULL )
+	{
+		// Loader Tags
+		this->WriteString("<SetLoaderTag>",3);
+		*this->BuildFileStream << loaderTag << "</SetLoaderTag>\n";
+	}
+
+	this->WriteString("</PostLink>\n", 2);
+}
+
+//----------------------------------------------------------------------------
 void cmVisualStudio10TargetGenerator::AddLibraries(
   cmComputeLinkInformation& cli,
   std::vector<std::string>& libVec)
@@ -2848,6 +2870,8 @@ void cmVisualStudio10TargetGenerator::WriteItemDefinitionGroups()
 	this->WritePreLinkOptions(*i);
     //    output link flags       <Link></Link>
     this->WriteLinkOptions(*i);
+	//    output prelink flags    <PostLink></PostLink>
+	this->WritePostLinkOptions(*i);
     //    output lib flags       <Lib></Lib>
     this->WriteLibOptions(*i);
 	this->WriteXbox360Options();
