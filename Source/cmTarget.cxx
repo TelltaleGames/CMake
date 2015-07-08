@@ -1970,12 +1970,13 @@ static void processIncludeDirectories(cmTarget const* tgt,
     bool const fromImported = item.Target && item.Target->IsImported();
     bool const checkCMP0027 = item.FromGenex;
     std::vector<std::string> entryIncludes;
-    cmSystemTools::ExpandListArgument((*it)->ge->Evaluate(mf,
+    std::string evaluatedExpr = (*it)->ge->Evaluate(mf,
                                               config,
                                               false,
                                               tgt,
-                                              dagChecker, language),
-                                    entryIncludes);
+                                              dagChecker, language);
+    std::replace(evaluatedExpr.begin(), evaluatedExpr.end(), '\\', '/');
+    cmSystemTools::ExpandListArgument(evaluatedExpr, entryIncludes);
 
     std::string usedIncludes;
     for(std::vector<std::string>::iterator
