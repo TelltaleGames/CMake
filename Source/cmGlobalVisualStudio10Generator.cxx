@@ -65,23 +65,19 @@ public:
       }
     if(strcmp(p, "XBox 360") == 0)
       {
-      return new cmGlobalVisualStudio10Generator(
-        genName, "XBox 360");
+      return new cmGlobalVisualStudio10Generator(cm, genName, "XBox 360");
       }
     if(strcmp(p, "PS3") == 0)
       {
-      return new cmGlobalVisualStudio10Generator(
-        genName, "PS3");
+      return new cmGlobalVisualStudio10Generator(cm, genName, "PS3");
       }
     if(strcmp(p, "PSVita") == 0)
       {
-      return new cmGlobalVisualStudio10Generator(
-        genName, "PSVita");
+      return new cmGlobalVisualStudio10Generator(cm, genName, "PSVita");
       }
     if(strcmp(p, "PS4") == 0)
       {
-      return new cmGlobalVisualStudio10Generator(
-        genName, "ORBIS");
+      return new cmGlobalVisualStudio10Generator(cm, genName, "ORBIS");
       }
     return 0;
     }

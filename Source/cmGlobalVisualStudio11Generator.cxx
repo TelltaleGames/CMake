@@ -60,18 +60,15 @@ public:
       }
     if(strcmp(p, "XBOne") == 0)
       {
-      return new cmGlobalVisualStudio11Generator(
-        genName, "Durango");
+      return new cmGlobalVisualStudio11Generator(cm, genName, "Durango");
       }
 	if(strcmp(p, "PS4") == 0)
 	{
-		return new cmGlobalVisualStudio11Generator(
-			genName, "ORBIS");
+		return new cmGlobalVisualStudio11Generator(cm, genName, "ORBIS");
 	}
 	if(strcmp(p, "WiiU") == 0)
 	{
-		return new cmGlobalVisualStudio11Generator(
-			genName, "Cafe");
+		return new cmGlobalVisualStudio11Generator(cm, genName, "Cafe");
 	}
 
     std::set<std::string> installedSDKs =
