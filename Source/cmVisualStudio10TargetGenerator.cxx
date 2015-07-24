@@ -2750,6 +2750,14 @@ void cmVisualStudio10TargetGenerator::WritePreLinkOptions(std::string const& con
 		*this->BuildFileStream << defFile << "</DEFFile>\n";
 	}
 
+	const char* addOptions = this->Target->GetProperty("PRELINK_ADD_OPTIONS");
+	if( addOptions != NULL )
+	{
+		// Additional Options
+		this->WriteString("<AdditionalOptions>",3);
+		*this->BuildFileStream << addOptions << " %(AdditionalOptions)</AdditionalOptions>\n";
+	}
+
 	this->WriteString("</PreLink>\n", 2);
 }
 
@@ -2797,6 +2805,14 @@ void cmVisualStudio10TargetGenerator::WritePostLinkOptions(std::string const& co
 		// Loader Tags
 		this->WriteString("<SetLoaderTag>",3);
 		*this->BuildFileStream << loaderTag << "</SetLoaderTag>\n";
+	}
+
+	const char* addOptions = this->Target->GetProperty("POSTLINK_ADD_OPTIONS");
+	if( addOptions != NULL )
+	{
+		// Additional Options
+		this->WriteString("<AdditionalOptions>",3);
+		*this->BuildFileStream << addOptions << " %(AdditionalOptions)</AdditionalOptions>\n";
 	}
 
 	this->WriteString("</PostLink>\n", 2);
