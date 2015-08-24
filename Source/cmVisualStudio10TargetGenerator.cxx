@@ -450,6 +450,40 @@ void cmVisualStudio10TargetGenerator::Generate()
     (*this->BuildFileStream) << cmVS10EscapeXML(targetFrameworkVersion)
                              << "</TargetFrameworkVersion>\n";
     }
+
+  //Support for adding global properties
+  if(this->Makefile->GetState())
+    {
+    const cmPropertyMap& globalProps = this->Makefile->GetState()->GetGlobalProperties();
+    for(cmPropertyMap::const_iterator i = globalProps.begin(); i != globalProps.end(); ++i)
+      {
+      if(i->first.find("VS_GLOBAL_") == 0 && !this->Target->GetProperty(i->first))
+        {
+         std::string name = i->first.substr(10);
+         if(name != "")
+          {
+          this->WriteString((std::string("<") + name + std::string(">")).c_str(), 2);
+          (*this->BuildFileStream) << cmVS10EscapeXML(i->second.GetValue()) << "</" << name << ">\n";
+          }
+        }
+      }
+    }
+
+  // Support adding target specific properties
+  const cmPropertyMap& targetProps = this->Target->GetProperties();
+  for(cmPropertyMap::const_iterator i = targetProps.begin(); i != targetProps.end(); ++i)
+    {
+    if(i->first.find("VS_GLOBAL_") == 0)
+      {
+      std::string name = i->first.substr(10);
+      if(name != "")
+        {
+        this->WriteString((std::string("<") + name + std::string(">")).c_str(), 2);
+        (*this->BuildFileStream) << cmVS10EscapeXML(i->second.GetValue()) << "</" << name << ">\n";
+        }
+      }
+    }
+
   this->WriteString("</PropertyGroup>\n", 1);
   this->WriteString("<Import Project="
                     "\"$(VCTargetsPath)\\Microsoft.Cpp.Default.props\" />\n",
