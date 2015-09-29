@@ -111,6 +111,9 @@ cmIDEFlagTable const* cmVisualStudio10TargetGenerator::GetLibFlagTable() const
 
 cmIDEFlagTable const* cmVisualStudio10TargetGenerator::GetLinkFlagTable() const
 {
+  if(this->GlobalGenerator->GetPlatformName() == "PS3")
+    { return cmVS10PS3LinkFlagTable; }
+
   if(this->MSTools)
     {
     cmGlobalVisualStudioGenerator::VSVersion

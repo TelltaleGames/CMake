@@ -62,6 +62,14 @@ public:
       {
       return new cmGlobalVisualStudio11Generator(cm, genName, "Durango");
       }
+	if(strcmp(p, "PS3") == 0)
+	  {
+      return new cmGlobalVisualStudio11Generator(cm, genName, "PS3");
+	  }
+    if(strcmp(p, "PSVita") == 0)
+      {
+      return new cmGlobalVisualStudio10Generator(cm, genName, "PSVita");
+      }
 	if(strcmp(p, "PS4") == 0)
 	{
 		return new cmGlobalVisualStudio11Generator(cm, genName, "ORBIS");
@@ -100,8 +108,10 @@ public:
     names.push_back(vs11generatorName + std::string(" ARM"));
     names.push_back(vs11generatorName + std::string(" Win64"));
     names.push_back(vs11generatorName + std::string(" XBOne"));
+	names.push_back(vs11generatorName + std::string(" PS3"));
 	names.push_back(vs11generatorName + std::string(" PS4"));
 	names.push_back(vs11generatorName + std::string(" WiiU"));
+    names.push_back(vs11generatorName + std::string(" PSVita")); 
 
     std::set<std::string> installedSDKs =
       cmGlobalVisualStudio11Generator::GetInstalledWindowsCESDKs();
@@ -130,6 +140,15 @@ cmGlobalVisualStudio11Generator::cmGlobalVisualStudio11Generator(cmake* cm,
     "ProductDir", vc11Express, cmSystemTools::KeyWOW64_32);
   this->DefaultPlatformToolset = "v110";
   this->Version = VS11;
+
+  if( strcmp(platformName.c_str(), "PS3") == 0 )
+  {
+      this->DefaultPlatformToolset = "SNC";
+  }
+  if( strcmp(platformName.c_str(), "PSVita") == 0 )
+  {
+      this->DefaultPlatformToolset = "PSVita";
+  }
 }
 
 //----------------------------------------------------------------------------
