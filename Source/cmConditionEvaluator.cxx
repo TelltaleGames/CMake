@@ -16,7 +16,8 @@ cmConditionEvaluator::cmConditionEvaluator(cmMakefile& makefile):
   Makefile(makefile),
   Policy12Status(makefile.GetPolicyStatus(cmPolicies::CMP0012)),
   Policy54Status(makefile.GetPolicyStatus(cmPolicies::CMP0054)),
-  Policy57Status(makefile.GetPolicyStatus(cmPolicies::CMP0057))
+  Policy57Status(makefile.GetPolicyStatus(cmPolicies::CMP0057)),
+  Policy64Status(makefile.GetPolicyStatus(cmPolicies::CMP0064))
 {
 
 }
@@ -299,11 +300,11 @@ void cmConditionEvaluator::IncrementArguments(cmArgumentList &newArgs,
                         cmArgumentList::iterator &argP1,
                         cmArgumentList::iterator &argP2) const
 {
-  if (argP1  != newArgs.end())
+  if (argP1 != newArgs.end())
     {
     argP1++;
     argP2 = argP1;
-    if (argP1  != newArgs.end())
+    if (argP1 != newArgs.end())
       {
       argP2++;
       }
@@ -442,35 +443,35 @@ bool cmConditionEvaluator::HandleLevel1(cmArgumentList &newArgs,
       argP1 = arg;
       this->IncrementArguments(newArgs,argP1,argP2);
       // does a file exist
-      if (this->IsKeyword("EXISTS", *arg) && argP1  != newArgs.end())
+      if (this->IsKeyword("EXISTS", *arg) && argP1 != newArgs.end())
         {
         this->HandlePredicate(
           cmSystemTools::FileExists(argP1->c_str()),
           reducible, arg, newArgs, argP1, argP2);
         }
       // does a directory with this name exist
-      if (this->IsKeyword("IS_DIRECTORY", *arg) && argP1  != newArgs.end())
+      if (this->IsKeyword("IS_DIRECTORY", *arg) && argP1 != newArgs.end())
         {
         this->HandlePredicate(
           cmSystemTools::FileIsDirectory(argP1->c_str()),
           reducible, arg, newArgs, argP1, argP2);
         }
       // does a symlink with this name exist
-      if (this->IsKeyword("IS_SYMLINK", *arg) && argP1  != newArgs.end())
+      if (this->IsKeyword("IS_SYMLINK", *arg) && argP1 != newArgs.end())
         {
         this->HandlePredicate(
           cmSystemTools::FileIsSymlink(argP1->c_str()),
           reducible, arg, newArgs, argP1, argP2);
         }
       // is the given path an absolute path ?
-      if (this->IsKeyword("IS_ABSOLUTE", *arg) && argP1  != newArgs.end())
+      if (this->IsKeyword("IS_ABSOLUTE", *arg) && argP1 != newArgs.end())
         {
         this->HandlePredicate(
           cmSystemTools::FileIsFullPath(argP1->c_str()),
           reducible, arg, newArgs, argP1, argP2);
         }
       // does a command exist
-      if (this->IsKeyword("COMMAND", *arg) && argP1  != newArgs.end())
+      if (this->IsKeyword("COMMAND", *arg) && argP1 != newArgs.end())
         {
         cmCommand* command =
             this->Makefile.GetState()->GetCommand(argP1->c_str());
@@ -493,8 +494,31 @@ bool cmConditionEvaluator::HandleLevel1(cmArgumentList &newArgs,
           this->Makefile.FindTargetToUse(argP1->GetValue())?true:false,
           reducible, arg, newArgs, argP1, argP2);
         }
+      // does a test exist
+      if(this->Policy64Status != cmPolicies::OLD &&
+        this->Policy64Status != cmPolicies::WARN)
+        {
+        if (this->IsKeyword("TEST", *arg) && argP1 != newArgs.end())
+          {
+          const cmTest* haveTest = this->Makefile.GetTest(argP1->c_str());
+          this->HandlePredicate(
+            haveTest?true:false,
+            reducible, arg, newArgs, argP1, argP2);
+          }
+        }
+      else if(this->Policy64Status == cmPolicies::WARN &&
+        this->IsKeyword("TEST", *arg))
+        {
+        std::ostringstream e;
+        e << cmPolicies::GetPolicyWarning(cmPolicies::CMP0064) << "\n";
+        e << "TEST will be interpreted as an operator "
+          "when the policy is set to NEW.  "
+          "Since the policy is not set the OLD behavior will be used.";
+
+        this->Makefile.IssueMessage(cmake::AUTHOR_WARNING, e.str());
+        }
       // is a variable defined
-      if (this->IsKeyword("DEFINED", *arg) && argP1  != newArgs.end())
+      if (this->IsKeyword("DEFINED", *arg) && argP1 != newArgs.end())
         {
         size_t argP1len = argP1->GetValue().size();
         bool bdef = false;

@@ -27,7 +27,8 @@ static cmInstallTargetGenerator* CreateInstallTargetGenerator(cmTarget& target,
 {
   cmInstallGenerator::MessageLevel message =
     cmInstallGenerator::SelectMessageLevel(target.GetMakefile());
-  return new cmInstallTargetGenerator(target, args.GetDestination().c_str(),
+  return new cmInstallTargetGenerator(target.GetName(),
+                        args.GetDestination().c_str(),
                         impLib, args.GetPermissions().c_str(),
                         args.GetConfigurations(), args.GetComponent().c_str(),
                         message,
@@ -41,7 +42,7 @@ static cmInstallFilesGenerator* CreateInstallFilesGenerator(
 {
   cmInstallGenerator::MessageLevel message =
     cmInstallGenerator::SelectMessageLevel(mf);
-  return new cmInstallFilesGenerator(mf,
+  return new cmInstallFilesGenerator(
                         absFiles, args.GetDestination().c_str(),
                         programs, args.GetPermissions().c_str(),
                         args.GetConfigurations(), args.GetComponent().c_str(),
@@ -752,6 +753,12 @@ bool cmInstallCommand::HandleTargetsMode(std::vector<std::string> const& args)
     installsPublicHeader = installsPublicHeader || publicHeaderGenerator != 0;
     installsResource = installsResource || resourceGenerator;
 
+    if (installsArchive || installsRuntime || installsFramework
+        || installsLibrary || installsBundle)
+      {
+      target.SetHaveInstallRule(true);
+      }
+
     this->Makefile->AddInstallGenerator(archiveGenerator);
     this->Makefile->AddInstallGenerator(libraryGenerator);
     this->Makefile->AddInstallGenerator(runtimeGenerator);
@@ -1399,7 +1406,7 @@ bool cmInstallCommand::HandleExportMode(std::vector<std::string> const& args)
       ica.GetDestination().c_str(),
       ica.GetPermissions().c_str(), ica.GetConfigurations(),
       ica.GetComponent().c_str(), message, fname.c_str(),
-      name_space.GetCString(), exportOld.IsEnabled(), this->Makefile);
+      name_space.GetCString(), exportOld.IsEnabled());
   this->Makefile->AddInstallGenerator(exportGenerator);
 
   return true;

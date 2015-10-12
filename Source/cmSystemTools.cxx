@@ -30,7 +30,6 @@
 # include "cmLocale.h"
 # include <cm_libarchive.h>
 #endif
-#include <cmsys/stl/algorithm>
 #include <cmsys/FStream.hxx>
 #include <cmsys/Terminal.h>
 
@@ -68,6 +67,11 @@
 #if defined(CMAKE_USE_MACH_PARSER)
 # include "cmMachO.h"
 #endif
+
+static bool cm_isspace(char c)
+{
+  return ((c & 0x80) == 0) && isspace(c);
+}
 
 class cmSystemToolsFileTime
 {
@@ -229,13 +233,13 @@ std::string cmSystemTools::HelpFileName(std::string name)
 std::string cmSystemTools::TrimWhitespace(const std::string& s)
 {
   std::string::const_iterator start = s.begin();
-  while(start != s.end() && *start <= ' ')
+  while (start != s.end() && cm_isspace(*start))
     ++start;
   if (start == s.end())
     return "";
 
   std::string::const_iterator stop = s.end()-1;
-  while(*stop <= ' ')
+  while (cm_isspace(*stop))
     --stop;
   return std::string(start, stop+1);
 }
@@ -497,7 +501,7 @@ void cmSystemTools::ParseWindowsCommandLine(const char* command,
       {
       arg.append(backslashes, '\\');
       backslashes = 0;
-      if(((*c & 0x80) == 0 ) && isspace(*c))
+      if (cm_isspace(*c))
         {
         if(in_quotes)
           {
@@ -554,25 +558,6 @@ void cmSystemTools::ParseUnixCommandLine(const char* command,
   // Invoke the underlying parser.
   cmSystemToolsArgV argv = cmsysSystem_Parse_CommandForUnix(command, 0);
   argv.Store(args);
-}
-
-std::string cmSystemTools::EscapeWindowsShellArgument(const char* arg,
-                                                      int shell_flags)
-{
-  char local_buffer[1024];
-  char* buffer = local_buffer;
-  int size = cmsysSystem_Shell_GetArgumentSizeForWindows(arg, shell_flags);
-  if(size > 1024)
-    {
-    buffer = new char[size];
-    }
-  cmsysSystem_Shell_GetArgumentForWindows(arg, buffer, shell_flags);
-  std::string result(buffer);
-  if(buffer != local_buffer)
-    {
-    delete [] buffer;
-    }
-  return result;
 }
 
 std::vector<std::string> cmSystemTools::ParseArguments(const char* command)
@@ -969,8 +954,9 @@ bool cmSystemTools::RenameFile(const char* oldname, const char* newname)
      Try multiple times since we may be racing against another process
      creating/opening the destination file just before our MoveFileEx.  */
   WindowsFileRetry retry = cmSystemTools::GetWindowsFileRetry();
-  while(!MoveFileExW(cmsys::Encoding::ToWide(oldname).c_str(),
-                     cmsys::Encoding::ToWide(newname).c_str(),
+  while(!MoveFileExW(
+      SystemTools::ConvertToWindowsExtendedPath(oldname).c_str(),
+      SystemTools::ConvertToWindowsExtendedPath(newname).c_str(),
                      MOVEFILE_REPLACE_EXISTING) && --retry.Count)
     {
     DWORD last_error = GetLastError();
@@ -981,12 +967,14 @@ bool cmSystemTools::RenameFile(const char* oldname, const char* newname)
       return false;
       }
     DWORD attrs =
-      GetFileAttributesW(cmsys::Encoding::ToWide(newname).c_str());
+      GetFileAttributesW(
+        SystemTools::ConvertToWindowsExtendedPath(newname).c_str());
     if((attrs != INVALID_FILE_ATTRIBUTES) &&
        (attrs & FILE_ATTRIBUTE_READONLY))
       {
       // Remove the read-only attribute from the destination file.
-      SetFileAttributesW(cmsys::Encoding::ToWide(newname).c_str(),
+      SetFileAttributesW(
+        SystemTools::ConvertToWindowsExtendedPath(newname).c_str(),
                          attrs & ~FILE_ATTRIBUTE_READONLY);
       }
     else
@@ -1027,6 +1015,95 @@ std::string cmSystemTools::ComputeStringMD5(const std::string& input)
   cmSystemTools::Message("md5sum not supported in bootstrapping mode","Error");
   return "";
 #endif
+}
+
+//----------------------------------------------------------------------------
+std::string cmSystemTools::ComputeCertificateThumbprint(
+  const std::string& source)
+{
+  std::string thumbprint;
+
+#if defined(CMAKE_BUILD_WITH_CMAKE) && defined(_WIN32)
+  BYTE* certData = NULL;
+  CRYPT_INTEGER_BLOB cryptBlob;
+  HCERTSTORE certStore = NULL;
+  PCCERT_CONTEXT certContext = NULL;
+
+  HANDLE certFile =
+    CreateFileW(cmsys::Encoding::ToWide(source.c_str()).c_str(),
+                GENERIC_READ,
+                FILE_SHARE_READ,
+                NULL,
+                OPEN_EXISTING,
+                FILE_ATTRIBUTE_NORMAL,
+                NULL);
+
+  if (certFile != INVALID_HANDLE_VALUE && certFile != NULL)
+    {
+    DWORD fileSize = GetFileSize(certFile, NULL);
+    if (fileSize != INVALID_FILE_SIZE)
+      {
+      certData = new BYTE[fileSize];
+      if (certData != NULL)
+        {
+        DWORD dwRead = 0;
+        if (ReadFile(certFile, certData, fileSize, &dwRead, NULL))
+          {
+          cryptBlob.cbData = fileSize;
+          cryptBlob.pbData = certData;
+
+          // Verify that this is a valid cert
+          if (PFXIsPFXBlob(&cryptBlob))
+            {
+            // Open the certificate as a store
+            certStore = PFXImportCertStore(
+              &cryptBlob, NULL, CRYPT_EXPORTABLE);
+            if (certStore != NULL)
+              {
+              // There should only be 1 cert.
+              certContext = CertEnumCertificatesInStore(certStore,
+                certContext);
+              if (certContext != NULL)
+                {
+                // The hash is 20 bytes
+                BYTE hashData[20];
+                DWORD hashLength = 20;
+
+                // Buffer to print the hash. Each byte takes 2 chars +
+                // terminating character
+                char hashPrint[41];
+                char *pHashPrint = hashPrint;
+                // Get the hash property from the certificate
+                if (CertGetCertificateContextProperty(certContext,
+                  CERT_HASH_PROP_ID, hashData, &hashLength))
+                  {
+                  for (DWORD i = 0; i < hashLength; i++)
+                    {
+                    // Convert each byte to hexadecimal
+                    sprintf(pHashPrint, "%02X", hashData[i]);
+                    pHashPrint += 2;
+                    }
+                  *pHashPrint = '\0';
+                  thumbprint = hashPrint;
+                  }
+                CertFreeCertificateContext(certContext);
+                }
+              CertCloseStore(certStore, 0);
+              }
+            }
+          }
+        delete[] certData;
+        }
+      }
+    CloseHandle(certFile);
+    }
+#else
+  (void)source;
+  cmSystemTools::Message("ComputeCertificateThumbprint is not implemented",
+    "Error");
+#endif
+
+  return thumbprint;
 }
 
 void cmSystemTools::Glob(const std::string& directory,
@@ -1337,15 +1414,6 @@ std::string cmSystemTools::ConvertToRunCommandPath(const char* path)
 #endif
 }
 
-bool cmSystemTools::StringEndsWith(const char* str1, const char* str2)
-{
-  if ( !str1 || !str2 || strlen(str1) < strlen(str2) )
-    {
-    return 0;
-    }
-  return !strncmp(str1 + (strlen(str1)-strlen(str2)), str2, strlen(str2));
-}
-
 // compute the relative path from here to there
 std::string cmSystemTools::RelativePath(const char* local, const char* remote)
 {
@@ -1498,7 +1566,7 @@ bool cmSystemTools::CreateTar(const char* outFileName,
 {
 #if defined(CMAKE_BUILD_WITH_CMAKE)
   std::string cwd = cmSystemTools::GetCurrentWorkingDirectory();
-  cmsys::ofstream fout(outFileName, std::ios::out | cmsys_ios_binary);
+  cmsys::ofstream fout(outFileName, std::ios::out | std::ios::binary);
   if(!fout)
     {
     std::string e = "Cannot open output file \"";
@@ -1721,7 +1789,7 @@ bool extract_tar(const char* outFileName, bool verbose,
   static_cast<void>(localeRAII);
   struct archive* a = archive_read_new();
   struct archive *ext = archive_write_disk_new();
-  archive_read_support_compression_all(a);
+  archive_read_support_filter_all(a);
   archive_read_support_format_all(a);
   struct archive_entry *entry;
   int r = cm_archive_read_open_file(a, outFileName, 10240);
@@ -1808,7 +1876,7 @@ bool extract_tar(const char* outFileName, bool verbose,
     }
   archive_write_free(ext);
   archive_read_close(a);
-  archive_read_finish(a);
+  archive_read_free(a);
   return r == ARCHIVE_EOF || r == ARCHIVE_OK;
 }
 }
@@ -1975,12 +2043,13 @@ bool cmSystemTools::CopyFileTime(const char* fromFile, const char* toFile)
 {
 #if defined(_WIN32) && !defined(__CYGWIN__)
   cmSystemToolsWindowsHandle hFrom =
-    CreateFileW(cmsys::Encoding::ToWide(fromFile).c_str(),
+    CreateFileW(SystemTools::ConvertToWindowsExtendedPath(fromFile).c_str(),
                 GENERIC_READ, FILE_SHARE_READ, 0,
-                OPEN_EXISTING, 0, 0);
+                OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, 0);
   cmSystemToolsWindowsHandle hTo =
-    CreateFileW(cmsys::Encoding::ToWide(toFile).c_str(),
-                GENERIC_WRITE, 0, 0, OPEN_EXISTING, 0, 0);
+    CreateFileW(SystemTools::ConvertToWindowsExtendedPath(toFile).c_str(),
+                FILE_WRITE_ATTRIBUTES, 0, 0, OPEN_EXISTING,
+                FILE_FLAG_BACKUP_SEMANTICS, 0);
   if(!hFrom || !hTo)
     {
     return false;
@@ -2031,8 +2100,9 @@ bool cmSystemTools::FileTimeGet(const char* fname, cmSystemToolsFileTime* t)
 {
 #if defined(_WIN32) && !defined(__CYGWIN__)
   cmSystemToolsWindowsHandle h =
-    CreateFileW(cmsys::Encoding::ToWide(fname).c_str(),
-                GENERIC_READ, FILE_SHARE_READ, 0, OPEN_EXISTING, 0, 0);
+    CreateFileW(SystemTools::ConvertToWindowsExtendedPath(fname).c_str(),
+                GENERIC_READ, FILE_SHARE_READ, 0, OPEN_EXISTING,
+                FILE_FLAG_BACKUP_SEMANTICS, 0);
   if(!h)
     {
     return false;
@@ -2058,8 +2128,9 @@ bool cmSystemTools::FileTimeSet(const char* fname, cmSystemToolsFileTime* t)
 {
 #if defined(_WIN32) && !defined(__CYGWIN__)
   cmSystemToolsWindowsHandle h =
-    CreateFileW(cmsys::Encoding::ToWide(fname).c_str(),
-                GENERIC_WRITE, 0, 0, OPEN_EXISTING, 0, 0);
+    CreateFileW(SystemTools::ConvertToWindowsExtendedPath(fname).c_str(),
+                FILE_WRITE_ATTRIBUTES, 0, 0, OPEN_EXISTING,
+                FILE_FLAG_BACKUP_SEMANTICS, 0);
   if(!h)
     {
     return false;
@@ -2148,6 +2219,7 @@ static std::string cmSystemToolsCTestCommand;
 static std::string cmSystemToolsCPackCommand;
 static std::string cmSystemToolsCMakeCursesCommand;
 static std::string cmSystemToolsCMakeGUICommand;
+static std::string cmSystemToolsCMClDepsCommand;
 static std::string cmSystemToolsCMakeRoot;
 void cmSystemTools::FindCMakeResources(const char* argv0)
 {
@@ -2240,6 +2312,13 @@ void cmSystemTools::FindCMakeResources(const char* argv0)
     {
     cmSystemToolsCMakeCursesCommand = "";
     }
+  cmSystemToolsCMClDepsCommand = exe_dir;
+  cmSystemToolsCMClDepsCommand += "/cmcldeps";
+  cmSystemToolsCMClDepsCommand += cmSystemTools::GetExecutableExtension();
+  if(!cmSystemTools::FileExists(cmSystemToolsCMClDepsCommand.c_str()))
+    {
+    cmSystemToolsCMClDepsCommand = "";
+    }
 
 #ifdef CMAKE_BUILD_WITH_CMAKE
   // Install tree has "<prefix>/bin/cmake" and "<prefix><CMAKE_DATA_DIR>".
@@ -2307,6 +2386,12 @@ std::string const& cmSystemTools::GetCMakeGUICommand()
 }
 
 //----------------------------------------------------------------------------
+std::string const& cmSystemTools::GetCMClDepsCommand()
+{
+  return cmSystemToolsCMClDepsCommand;
+}
+
+//----------------------------------------------------------------------------
 std::string const& cmSystemTools::GetCMakeRoot()
 {
   return cmSystemToolsCMakeRoot;
@@ -2331,7 +2416,7 @@ void cmSystemTools::MakefileColorEcho(int color, const char* message,
     assumeTTY = 0;
     }
 
-  if(enabled)
+  if(enabled && color != cmsysTerminal_Color_Normal)
     {
     // Print with color.  Delay the newline until later so that
     // all color restore sequences appear before it.
@@ -2692,6 +2777,14 @@ bool cmSystemTools::VersionCompare(cmSystemTools::CompareOp op,
 }
 
 //----------------------------------------------------------------------------
+bool cmSystemTools::VersionCompareGreater(std::string const& lhs,
+                                          std::string const& rhs)
+{
+  return cmSystemTools::VersionCompare(
+    cmSystemTools::OP_GREATER, lhs.c_str(), rhs.c_str());
+}
+
+//----------------------------------------------------------------------------
 bool cmSystemTools::RemoveRPath(std::string const& file, std::string* emsg,
                                 bool* removed)
 {
@@ -2953,5 +3046,14 @@ bool cmSystemTools::StringToLong(const char* str, long* value)
   errno = 0;
   char *endp;
   *value = strtol(str, &endp, 10);
+  return (*endp == '\0') && (endp != str) && (errno == 0);
+}
+
+//----------------------------------------------------------------------------
+bool cmSystemTools::StringToULong(const char* str, unsigned long* value)
+{
+  errno = 0;
+  char *endp;
+  *value = strtoul(str, &endp, 10);
   return (*endp == '\0') && (endp != str) && (errno == 0);
 }

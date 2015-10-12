@@ -27,7 +27,7 @@ static std::string cmIfCommandError(
       i != args.end(); ++i)
     {
     err += " ";
-    err += cmLocalGenerator::EscapeForCMake(i->GetValue());
+    err += cmOutputConverter::EscapeForCMake(i->GetValue());
     }
   err += "\n";
   return err;
@@ -92,10 +92,6 @@ IsFunctionBlocked(const cmListFileFunction& lff,
             }
           else
             {
-            // Place this call on the call stack.
-            cmMakefileCall stack_manager(&mf, this->Functions[c], status);
-            static_cast<void>(stack_manager);
-
             // if trace is enabled, print the evaluated "elseif" statement
             if(mf.GetCMakeInstance()->GetTrace())
               {
@@ -119,7 +115,8 @@ IsFunctionBlocked(const cmListFileFunction& lff,
               {
               std::string err = cmIfCommandError(expandedArguments);
               err += errorString;
-              mf.IssueMessage(messType, err);
+              cmListFileBacktrace bt = mf.GetBacktrace(this->Functions[c]);
+              mf.GetCMakeInstance()->IssueMessage(messType, err, bt);
               if (messType == cmake::FATAL_ERROR)
                 {
                 cmSystemTools::SetFatalErrorOccured();
