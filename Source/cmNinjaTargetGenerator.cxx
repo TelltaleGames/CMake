@@ -45,9 +45,8 @@ cmNinjaTargetGenerator::New(cmGeneratorTarget* target)
         // We only want to process global targets that live in the home
         // (i.e. top-level) directory.  CMake creates copies of these targets
         // in every directory, which we don't need.
-        cmMakefile *mf = target->Target->GetMakefile();
-        if (strcmp(mf->GetCurrentSourceDirectory(),
-                   mf->GetHomeDirectory()) == 0)
+        if (strcmp(target->GetLocalGenerator()->GetCurrentSourceDirectory(),
+                   target->GetLocalGenerator()->GetSourceDirectory()) == 0)
           return new cmNinjaUtilityTargetGenerator(target);
         // else fallthrough
       }
@@ -254,7 +253,7 @@ cmNinjaTargetGenerator
 
 std::string cmNinjaTargetGenerator::GetTargetOutputDir() const
 {
-  std::string dir = this->Target->GetDirectory(this->GetConfigName());
+  std::string dir = this->GeneratorTarget->GetDirectory(this->GetConfigName());
   return ConvertToNinjaPath(dir);
 }
 
@@ -289,7 +288,7 @@ bool cmNinjaTargetGenerator::SetMsvcTargetPdbVariable(cmNinjaVars& vars) const
        this->Target->GetType() == cmTarget::SHARED_LIBRARY ||
        this->Target->GetType() == cmTarget::MODULE_LIBRARY)
       {
-      pdbPath = this->Target->GetPDBDirectory(this->GetConfigName());
+      pdbPath = this->GeneratorTarget->GetPDBDirectory(this->GetConfigName());
       pdbPath += "/";
       pdbPath += this->GeneratorTarget->GetPDBName(this->GetConfigName());
       }

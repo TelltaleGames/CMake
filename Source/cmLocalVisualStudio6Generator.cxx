@@ -111,14 +111,14 @@ void cmLocalVisualStudio6Generator::Generate()
 void cmLocalVisualStudio6Generator::OutputDSPFile()
 {
   // If not an in source build, then create the output directory
-  if(strcmp(this->Makefile->GetCurrentBinaryDirectory(),
-            this->Makefile->GetHomeDirectory()) != 0)
+  if(strcmp(this->GetCurrentBinaryDirectory(),
+            this->GetSourceDirectory()) != 0)
     {
     if(!cmSystemTools::MakeDirectory
-       (this->Makefile->GetCurrentBinaryDirectory()))
+       (this->GetCurrentBinaryDirectory()))
       {
       cmSystemTools::Error("Error creating directory ",
-                           this->Makefile->GetCurrentBinaryDirectory());
+                           this->GetCurrentBinaryDirectory());
       }
     }
 
@@ -163,7 +163,7 @@ void cmLocalVisualStudio6Generator::OutputDSPFile()
       std::string::size_type pos = l->first.rfind('/');
       if(pos != std::string::npos)
         {
-        std::string dir = this->Makefile->GetCurrentBinaryDirectory();
+        std::string dir = this->GetCurrentBinaryDirectory();
         dir += "/";
         dir += l->first.substr(0, pos);
         if(!cmSystemTools::MakeDirectory(dir.c_str()))
@@ -189,7 +189,7 @@ void cmLocalVisualStudio6Generator::CreateSingleDSP(const std::string& lname,
 
   // create the dsp.cmake file
   std::string fname;
-  fname = this->Makefile->GetCurrentBinaryDirectory();
+  fname = this->GetCurrentBinaryDirectory();
   fname += "/";
   fname += pname;
   fname += ".dsp";
@@ -215,7 +215,7 @@ void cmLocalVisualStudio6Generator::AddDSPBuildRule(cmTarget& tgt)
   dspname += ".dsp.cmake";
   cmCustomCommandLine commandLine;
   commandLine.push_back(cmSystemTools::GetCMakeCommand());
-  std::string makefileIn = this->Makefile->GetCurrentSourceDirectory();
+  std::string makefileIn = this->GetCurrentSourceDirectory();
   makefileIn += "/";
   makefileIn += "CMakeLists.txt";
   if(!cmSystemTools::FileExists(makefileIn.c_str()))
@@ -226,10 +226,10 @@ void cmLocalVisualStudio6Generator::AddDSPBuildRule(cmTarget& tgt)
   comment += makefileIn;
   std::string args;
   args = "-H";
-  args += this->Makefile->GetHomeDirectory();
+  args += this->GetSourceDirectory();
   commandLine.push_back(args);
   args = "-B";
-  args += this->Makefile->GetHomeOutputDirectory();
+  args += this->GetBinaryDirectory();
   commandLine.push_back(args);
 
   std::vector<std::string> const& listFiles = this->Makefile->GetListFiles();
@@ -243,7 +243,8 @@ void cmLocalVisualStudio6Generator::AddDSPBuildRule(cmTarget& tgt)
                                            no_working_directory, true);
   if(this->Makefile->GetSource(makefileIn.c_str()))
     {
-    tgt.AddSource(makefileIn);
+    cmGeneratorTarget* gt = this->GlobalGenerator->GetGeneratorTarget(&tgt);
+    gt->AddSource(makefileIn);
     }
   else
     {
@@ -577,9 +578,9 @@ cmLocalVisualStudio6Generator
                         const cmCustomCommand& origCommand)
 {
   // Create a fake output that forces the rule to run.
-  char* output = new char[(strlen(this->Makefile->GetCurrentBinaryDirectory())
+  char* output = new char[(strlen(this->GetCurrentBinaryDirectory())
                            + target.GetName().size() + 30)];
-  sprintf(output,"%s/%s_force_%i", this->Makefile->GetCurrentBinaryDirectory(),
+  sprintf(output,"%s/%s_force_%i", this->GetCurrentBinaryDirectory(),
           target.GetName().c_str(), count);
   const char* comment = origCommand.GetComment();
   if(!comment && origCommand.GetOutputs().empty())
@@ -595,7 +596,8 @@ cmLocalVisualStudio6Generator
        origCommand.GetCommandLines(), comment,
        origCommand.GetWorkingDirectory().c_str()))
     {
-    target.AddSource(outsf->GetFullPath());
+    cmGeneratorTarget* gt = this->GlobalGenerator->GetGeneratorTarget(&target);
+    gt->AddSource(outsf->GetFullPath());
     }
 
   // Replace the dependencies with the output of this rule so that the
@@ -803,7 +805,11 @@ cmLocalVisualStudio6Generator::MaybeCreateOutputDir(cmTarget& target,
   // VS6 forgets to create the output directory for archives if it
   // differs from the intermediate directory.
   if(target.GetType() != cmTarget::STATIC_LIBRARY) { return pcc; }
-  std::string outDir = target.GetDirectory(config, false);
+
+  cmGeneratorTarget* gt =
+    this->GlobalGenerator->GetGeneratorTarget(&target);
+
+  std::string outDir = gt->GetDirectory(config, false);
 
   // Add a pre-link event to create the directory.
   cmCustomCommandLine command;
@@ -1361,20 +1367,20 @@ void cmLocalVisualStudio6Generator
 #ifdef CM_USE_OLD_VS6
     outputDirOld =
       removeQuotes(this->ConvertToOutputFormat
-                   (target.GetDirectory().c_str(), SHELL));
+                   (gt->GetDirectory().c_str(), SHELL));
 #endif
     outputDirDebug =
         removeQuotes(this->ConvertToOutputFormat(
-                       target.GetDirectory("Debug").c_str(), SHELL));
+                       gt->GetDirectory("Debug").c_str(), SHELL));
     outputDirRelease =
         removeQuotes(this->ConvertToOutputFormat(
-                 target.GetDirectory("Release").c_str(), SHELL));
+                 gt->GetDirectory("Release").c_str(), SHELL));
     outputDirMinSizeRel =
         removeQuotes(this->ConvertToOutputFormat(
-                 target.GetDirectory("MinSizeRel").c_str(), SHELL));
+                 gt->GetDirectory("MinSizeRel").c_str(), SHELL));
     outputDirRelWithDebInfo =
         removeQuotes(this->ConvertToOutputFormat(
-                 target.GetDirectory("RelWithDebInfo").c_str(), SHELL));
+                 gt->GetDirectory("RelWithDebInfo").c_str(), SHELL));
     }
   else if(target.GetType() == cmTarget::OBJECT_LIBRARY)
     {
@@ -1422,12 +1428,12 @@ void cmLocalVisualStudio6Generator
      target.GetType() == cmTarget::MODULE_LIBRARY ||
      target.GetType() == cmTarget::EXECUTABLE)
     {
-    std::string fullPathImpDebug = target.GetDirectory("Debug", true);
-    std::string fullPathImpRelease = target.GetDirectory("Release", true);
+    std::string fullPathImpDebug = gt->GetDirectory("Debug", true);
+    std::string fullPathImpRelease = gt->GetDirectory("Release", true);
     std::string fullPathImpMinSizeRel =
-      target.GetDirectory("MinSizeRel", true);
+      gt->GetDirectory("MinSizeRel", true);
     std::string fullPathImpRelWithDebInfo =
-      target.GetDirectory("RelWithDebInfo", true);
+      gt->GetDirectory("RelWithDebInfo", true);
     fullPathImpDebug += "/";
     fullPathImpRelease += "/";
     fullPathImpMinSizeRel += "/";
@@ -1962,7 +1968,7 @@ cmLocalVisualStudio6Generator
   // files directory for any configuration.  This is used to construct
   // object file names that do not produce paths that are too long.
   std::string dir_max;
-  dir_max += this->Makefile->GetCurrentBinaryDirectory();
+  dir_max += this->GetCurrentBinaryDirectory();
   dir_max += "/";
   dir_max += config_max;
   dir_max += "/";

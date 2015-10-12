@@ -399,7 +399,7 @@ cmGlobalGenerator::EnableLanguage(std::vector<std::string>const& languages,
   bool fatalError = false;
 
   mf->AddDefinition("RUN_CONFIGURE", true);
-  std::string rootBin = mf->GetHomeOutputDirectory();
+  std::string rootBin = this->CMakeInstance->GetHomeOutputDirectory();
   rootBin += cmake::GetCMakeFilesDirectory();
 
   // If the configuration files path has been set,
@@ -1108,15 +1108,15 @@ void cmGlobalGenerator::Configure()
   this->FirstTimeProgress = 0.0f;
   this->ClearGeneratorMembers();
 
-  cmMakefile* dirMf =
-      new cmMakefile(this, this->GetCMakeInstance()->GetCurrentSnapshot());
-  this->Makefiles.push_back(dirMf);
+  cmState::Snapshot snapshot = this->CMakeInstance->GetCurrentSnapshot();
 
-  // set the Start directories
-  dirMf->SetCurrentSourceDirectory
+  snapshot.GetDirectory().SetCurrentSource
     (this->CMakeInstance->GetHomeDirectory());
-  dirMf->SetCurrentBinaryDirectory
+  snapshot.GetDirectory().SetCurrentBinary
     (this->CMakeInstance->GetHomeOutputDirectory());
+
+  cmMakefile* dirMf = new cmMakefile(this, snapshot);
+  this->Makefiles.push_back(dirMf);
 
   this->BinaryDirectories.insert(
       this->CMakeInstance->GetHomeOutputDirectory());
@@ -1251,7 +1251,7 @@ bool cmGlobalGenerator::Compute()
 #ifdef CMAKE_BUILD_WITH_CMAKE
   // Iterate through all targets and set up automoc for those which have
   // the AUTOMOC, AUTOUIC or AUTORCC property set
-  std::vector<cmTarget const*> autogenTargets =
+  std::vector<cmGeneratorTarget const*> autogenTargets =
       this->CreateQtAutoGeneratorsTargets();
 #endif
 
@@ -1264,8 +1264,8 @@ bool cmGlobalGenerator::Compute()
     }
 
 #ifdef CMAKE_BUILD_WITH_CMAKE
-  for (std::vector<cmTarget const*>::iterator it = autogenTargets.begin();
-       it != autogenTargets.end(); ++it)
+  for (std::vector<cmGeneratorTarget const*>::iterator it =
+       autogenTargets.begin(); it != autogenTargets.end(); ++it)
     {
     cmQtAutoGeneratorInitializer::SetupAutoGenerateTarget(*it);
     }
@@ -1282,12 +1282,7 @@ bool cmGlobalGenerator::Compute()
       }
     }
 
-  return true;
-}
-
-void cmGlobalGenerator::Generate()
-{
-  unsigned int i;
+  this->AddExtraIDETargets();
 
   // Trace the dependencies, after that no custom commands should be added
   // because their dependencies might not be handled correctly
@@ -1307,22 +1302,27 @@ void cmGlobalGenerator::Generate()
   // Compute the inter-target dependencies.
   if(!this->ComputeTargetDepends())
     {
-    return;
+    return false;
     }
-
-  // Create a map from local generator to the complete set of targets
-  // it builds by default.
-  this->InitializeProgressMarks();
-
-  this->ProcessEvaluationFiles();
 
   for (i = 0; i < this->LocalGenerators.size(); ++i)
     {
     this->LocalGenerators[i]->ComputeHomeRelativeOutputPath();
     }
 
+  return true;
+}
+
+void cmGlobalGenerator::Generate()
+{
+  // Create a map from local generator to the complete set of targets
+  // it builds by default.
+  this->InitializeProgressMarks();
+
+  this->ProcessEvaluationFiles();
+
   // Generate project files
-  for (i = 0; i < this->LocalGenerators.size(); ++i)
+  for (unsigned int i = 0; i < this->LocalGenerators.size(); ++i)
     {
     this->SetCurrentMakefile(this->LocalGenerators[i]->GetMakefile());
     this->LocalGenerators[i]->Generate();
@@ -1403,18 +1403,18 @@ bool cmGlobalGenerator::ComputeTargetDepends()
 }
 
 //----------------------------------------------------------------------------
-std::vector<const cmTarget*>
+std::vector<const cmGeneratorTarget*>
 cmGlobalGenerator::CreateQtAutoGeneratorsTargets()
 {
-  std::vector<const cmTarget*> autogenTargets;
+  std::vector<const cmGeneratorTarget*> autogenTargets;
 
 #ifdef CMAKE_BUILD_WITH_CMAKE
   for(unsigned int i=0; i < this->LocalGenerators.size(); ++i)
     {
     cmTargets& targets =
       this->LocalGenerators[i]->GetMakefile()->GetTargets();
-    std::vector<std::string> targetNames;
-    targetNames.reserve(targets.size());
+    std::vector<cmGeneratorTarget*> filteredTargets;
+    filteredTargets.reserve(targets.size());
     for(cmTargets::iterator ti = targets.begin();
         ti != targets.end(); ++ti)
       {
@@ -1449,17 +1449,17 @@ cmGlobalGenerator::CreateQtAutoGeneratorsTargets()
         continue;
         }
 
-      cmQtAutoGeneratorInitializer::InitializeAutogenSources(&ti->second);
-      targetNames.push_back(ti->second.GetName());
+      cmGeneratorTarget* gt = this->GetGeneratorTarget(&ti->second);
+
+      cmQtAutoGeneratorInitializer::InitializeAutogenSources(gt);
+      filteredTargets.push_back(gt);
       }
-    for(std::vector<std::string>::iterator ti = targetNames.begin();
-        ti != targetNames.end(); ++ti)
+    for(std::vector<cmGeneratorTarget*>::iterator ti = filteredTargets.begin();
+        ti != filteredTargets.end(); ++ti)
       {
-      cmTarget* target = this->LocalGenerators[i]
-                              ->GetMakefile()->FindTarget(*ti, true);
       cmQtAutoGeneratorInitializer::InitializeAutogenTarget(
-           this->LocalGenerators[i], target);
-      autogenTargets.push_back(target);
+           this->LocalGenerators[i], *ti);
+      autogenTargets.push_back(*ti);
       }
     }
 #endif
@@ -2033,7 +2033,7 @@ bool cmGlobalGenerator::IsExcluded(cmLocalGenerator* root,
                                    cmGeneratorTarget* target) const
 {
   if(target->GetType() == cmTarget::INTERFACE_LIBRARY
-      || target->Target->GetPropertyAsBool("EXCLUDE_FROM_ALL"))
+      || target->GetPropertyAsBool("EXCLUDE_FROM_ALL"))
     {
     // This target is excluded from its directory.
     return true;
@@ -2105,7 +2105,7 @@ cmGlobalGenerator::FindLocalGenerator(const std::string& start_dir) const
   for(std::vector<cmLocalGenerator*>::const_iterator it =
       this->LocalGenerators.begin(); it != this->LocalGenerators.end(); ++it)
     {
-    std::string sd = (*it)->GetMakefile()->GetCurrentSourceDirectory();
+    std::string sd = (*it)->GetCurrentSourceDirectory();
     if (sd == start_dir)
       {
       return *it;
@@ -2879,10 +2879,8 @@ void cmGlobalGenerator::WriteRuleHashes(std::string const& pfile)
 //----------------------------------------------------------------------------
 void cmGlobalGenerator::WriteSummary()
 {
-  cmMakefile* mf = this->LocalGenerators[0]->GetMakefile();
-
   // Record all target directories in a central location.
-  std::string fname = mf->GetHomeOutputDirectory();
+  std::string fname = this->CMakeInstance->GetHomeOutputDirectory();
   fname += cmake::GetCMakeFilesDirectory();
   fname += "/TargetDirectories.txt";
   cmGeneratedFileStream fout(fname.c_str());
@@ -2949,10 +2947,12 @@ void cmGlobalGenerator::WriteSummary(cmTarget* target)
       {
       configs.push_back("");
       }
+    cmGeneratorTarget* gt =
+        this->GetGeneratorTarget(target);
     for(std::vector<std::string>::const_iterator ci = configs.begin();
         ci != configs.end(); ++ci)
       {
-      target->GetSourceFiles(sources, *ci);
+      gt->GetSourceFiles(sources, *ci);
       }
     std::vector<cmSourceFile*>::const_iterator sourcesEnd
         = cmRemoveDuplicates(sources);

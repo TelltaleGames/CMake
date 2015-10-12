@@ -83,7 +83,7 @@ void cmInstallTargetGenerator::GenerateScriptForConfig(std::ostream& os,
   else
     {
     fromDirConfig =
-        this->Target->Target->GetDirectory(config, this->ImportLibrary);
+        this->Target->GetDirectory(config, this->ImportLibrary);
     fromDirConfig += "/";
     }
   std::string toDir =
@@ -823,7 +823,7 @@ cmInstallTargetGenerator::AddStripRule(std::ostream& os,
 
   // Don't handle OSX Bundles.
   if(this->Target->Target->GetMakefile()->IsOn("APPLE") &&
-     this->Target->Target->GetPropertyAsBool("MACOSX_BUNDLE"))
+     this->Target->GetPropertyAsBool("MACOSX_BUNDLE"))
     {
     return;
     }

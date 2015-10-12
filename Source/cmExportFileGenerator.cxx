@@ -241,12 +241,14 @@ static bool isSubDirectory(const char* a, const char* b)
 
 //----------------------------------------------------------------------------
 static bool checkInterfaceDirs(const std::string &prepro,
-                      cmTarget *target, const std::string& prop)
+                      cmGeneratorTarget *target, const std::string& prop)
 {
   const char* installDir =
-            target->GetMakefile()->GetSafeDefinition("CMAKE_INSTALL_PREFIX");
-  const char* topSourceDir = target->GetMakefile()->GetHomeDirectory();
-  const char* topBinaryDir = target->GetMakefile()->GetHomeOutputDirectory();
+            target->Makefile->GetSafeDefinition("CMAKE_INSTALL_PREFIX");
+  const char* topSourceDir =
+      target->GetLocalGenerator()->GetSourceDirectory();
+  const char* topBinaryDir =
+      target->GetLocalGenerator()->GetBinaryDirectory();
 
   std::vector<std::string> parts;
   cmGeneratorExpression::Split(prepro, parts);
@@ -269,7 +271,7 @@ static bool checkInterfaceDirs(const std::string &prepro,
       {
       if (prop == "INTERFACE_INCLUDE_DIRECTORIES")
         {
-        switch (target->GetPolicyStatusCMP0041())
+        switch (target->Target->GetPolicyStatusCMP0041())
           {
           case cmPolicies::WARN:
             messageType = cmake::WARNING;
@@ -298,7 +300,7 @@ static bool checkInterfaceDirs(const std::string &prepro,
       e << "Target \"" << target->GetName() << "\" " << prop <<
            " property contains relative path:\n"
            "  \"" << *li << "\"";
-      target->GetMakefile()->IssueMessage(messageType, e.str());
+      target->GetLocalGenerator()->IssueMessage(messageType, e.str());
       }
     bool inBinary = isSubDirectory(li->c_str(), topBinaryDir);
     bool inSource = isSubDirectory(li->c_str(), topSourceDir);
@@ -316,7 +318,7 @@ static bool checkInterfaceDirs(const std::string &prepro,
         {
         if (!shouldContinue)
           {
-          switch(target->GetPolicyStatusCMP0052())
+          switch(target->Target->GetPolicyStatusCMP0052())
             {
             case cmPolicies::WARN:
               {
@@ -329,7 +331,7 @@ static bool checkInterfaceDirs(const std::string &prepro,
                 "a subdirectory of the " << (inBinary ? "build" : "source")
                 << " tree:\n    \"" << (inBinary ? topBinaryDir : topSourceDir)
                 << "\"" << std::endl;
-              target->GetMakefile()->IssueMessage(cmake::AUTHOR_WARNING,
+              target->GetLocalGenerator()->IssueMessage(cmake::AUTHOR_WARNING,
                                                   s.str());
               }
             case cmPolicies::OLD:
@@ -352,7 +354,7 @@ static bool checkInterfaceDirs(const std::string &prepro,
       e << "Target \"" << target->GetName() << "\" " << prop <<
            " property contains path:\n"
            "  \"" << *li << "\"\nwhich is prefixed in the build directory.";
-      target->GetMakefile()->IssueMessage(messageType, e.str());
+      target->GetLocalGenerator()->IssueMessage(messageType, e.str());
       }
     if (!inSourceBuild)
       {
@@ -361,7 +363,7 @@ static bool checkInterfaceDirs(const std::string &prepro,
         e << "Target \"" << target->GetName() << "\" " << prop <<
             " property contains path:\n"
             "  \"" << *li << "\"\nwhich is prefixed in the source directory.";
-        target->GetMakefile()->IssueMessage(messageType, e.str());
+        target->GetLocalGenerator()->IssueMessage(messageType, e.str());
         }
       }
     }
@@ -421,7 +423,9 @@ void cmExportFileGenerator::PopulateSourcesInterface(
     this->ResolveTargetsInGeneratorExpressions(prepro, target,
                                                 missingTargets);
 
-    if (!checkInterfaceDirs(prepro, target, propName))
+    cmGeneratorTarget* gt = target->GetMakefile()
+        ->GetGlobalGenerator()->GetGeneratorTarget(target);
+    if (!checkInterfaceDirs(prepro, gt, propName))
       {
       return;
       }
@@ -436,7 +440,9 @@ void cmExportFileGenerator::PopulateIncludeDirectoriesInterface(
                       ImportPropertyMap &properties,
                       std::vector<std::string> &missingTargets)
 {
-  cmTarget *target = tei->Target;
+  cmGeneratorTarget *target = tei->Target->GetMakefile()
+                                 ->GetGlobalGenerator()
+                                 ->GetGeneratorTarget(tei->Target);
   assert(preprocessRule == cmGeneratorExpression::InstallInterface);
 
   const char *propName = "INTERFACE_INCLUDE_DIRECTORIES";
@@ -450,12 +456,12 @@ void cmExportFileGenerator::PopulateIncludeDirectoriesInterface(
                                             true);
   this->ReplaceInstallPrefix(dirs);
   cmsys::auto_ptr<cmCompiledGeneratorExpression> cge = ge.Parse(dirs);
-  std::string exportDirs = cge->Evaluate(target->GetMakefile(), "",
-                                         false, target);
+  std::string exportDirs = cge->Evaluate(target->Target->GetMakefile(), "",
+                                         false, target->Target);
 
   if (cge->GetHadContextSensitiveCondition())
     {
-    cmMakefile* mf = target->GetMakefile();
+    cmMakefile* mf = target->Target->GetMakefile();
     std::ostringstream e;
     e << "Target \"" << target->GetName() << "\" is installed with "
     "INCLUDES DESTINATION set to a context sensitive path.  Paths which "
@@ -486,7 +492,7 @@ void cmExportFileGenerator::PopulateIncludeDirectoriesInterface(
                                                          true);
   if (!prepro.empty())
     {
-    this->ResolveTargetsInGeneratorExpressions(prepro, target,
+    this->ResolveTargetsInGeneratorExpressions(prepro, target->Target,
                                                 missingTargets);
 
     if (!checkInterfaceDirs(prepro, target, propName))
@@ -797,7 +803,7 @@ cmExportFileGenerator
 {
   // Add the transitive link dependencies for this configuration.
   cmLinkInterface const* iface = target->GetLinkInterface(config,
-                                                          target->Target);
+                                                          target);
   if (!iface)
     {
     return;
@@ -909,7 +915,7 @@ cmExportFileGenerator
 
   // Add the transitive link dependencies for this configuration.
   if(cmLinkInterface const* iface =
-                            target->GetLinkInterface(config, target->Target))
+                            target->GetLinkInterface(config, target))
     {
     this->SetImportLinkProperty(suffix, target,
                                 "IMPORTED_LINK_INTERFACE_LANGUAGES",

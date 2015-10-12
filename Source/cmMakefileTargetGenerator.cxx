@@ -419,7 +419,7 @@ void cmMakefileTargetGenerator
   this->WriteObjectBuildFile(obj, lang, source, depends);
 
   // The object file should be checked for dependency integrity.
-  std::string objFullPath = this->Makefile->GetCurrentBinaryDirectory();
+  std::string objFullPath = this->LocalGenerator->GetCurrentBinaryDirectory();
   objFullPath += "/";
   objFullPath += obj;
   objFullPath =
@@ -546,7 +546,8 @@ cmMakefileTargetGenerator
     {
     targetFullPathReal =
       this->GeneratorTarget->GetFullPath(this->ConfigName, false, true);
-    targetFullPathPDB = this->Target->GetPDBDirectory(this->ConfigName);
+    targetFullPathPDB =
+        this->GeneratorTarget->GetPDBDirectory(this->ConfigName);
     targetFullPathPDB += "/";
     targetFullPathPDB += this->GeneratorTarget->GetPDBName(this->ConfigName);
     }
@@ -642,7 +643,8 @@ cmMakefileTargetGenerator
     this->LocalGenerator->ExpandRuleVariables(compileCommand, vars);
     std::string workingDirectory =
       this->LocalGenerator->Convert(
-        this->Makefile->GetCurrentBinaryDirectory(), cmLocalGenerator::FULL);
+        this->LocalGenerator->GetCurrentBinaryDirectory(),
+                                    cmLocalGenerator::FULL);
     compileCommand.replace(compileCommand.find(langFlags),
                            langFlags.size(), this->GetFlags(lang));
     std::string langDefines = std::string("$(") + lang + "_DEFINES)";
@@ -698,7 +700,7 @@ cmMakefileTargetGenerator
   // Change the command working directory to the local build tree.
   this->LocalGenerator->CreateCDCommand
     (compileCommands,
-     this->Makefile->GetCurrentBinaryDirectory(),
+     this->LocalGenerator->GetCurrentBinaryDirectory(),
      cmLocalGenerator::HOME_OUTPUT);
   commands.insert(commands.end(),
                   compileCommands.begin(), compileCommands.end());
@@ -771,7 +773,7 @@ cmMakefileTargetGenerator
 
         this->LocalGenerator->CreateCDCommand
           (preprocessCommands,
-           this->Makefile->GetCurrentBinaryDirectory(),
+           this->LocalGenerator->GetCurrentBinaryDirectory(),
            cmLocalGenerator::HOME_OUTPUT);
         commands.insert(commands.end(),
                         preprocessCommands.begin(),
@@ -828,7 +830,7 @@ cmMakefileTargetGenerator
 
         this->LocalGenerator->CreateCDCommand
           (assemblyCommands,
-           this->Makefile->GetCurrentBinaryDirectory(),
+           this->LocalGenerator->GetCurrentBinaryDirectory(),
            cmLocalGenerator::HOME_OUTPUT);
         commands.insert(commands.end(),
                         assemblyCommands.begin(),
@@ -929,7 +931,7 @@ void cmMakefileTargetGenerator::WriteTargetCleanRules()
                                            *this->Target);
   this->LocalGenerator->CreateCDCommand
     (commands,
-     this->Makefile->GetCurrentBinaryDirectory(),
+     this->LocalGenerator->GetCurrentBinaryDirectory(),
      cmLocalGenerator::HOME_OUTPUT);
 
   // Write the rule.
@@ -1095,7 +1097,7 @@ void cmMakefileTargetGenerator::WriteTargetDependRules()
   // translation table for the dependency scanning process.
   depCmd << "cd "
          << (this->LocalGenerator->Convert(
-               this->Makefile->GetHomeOutputDirectory(),
+               this->LocalGenerator->GetBinaryDirectory(),
                cmLocalGenerator::FULL, cmLocalGenerator::SHELL))
          << " && ";
 #endif
@@ -1110,16 +1112,16 @@ void cmMakefileTargetGenerator::WriteTargetDependRules()
   // the state of our local generator sufficiently for its needs.
   depCmd << "$(CMAKE_COMMAND) -E cmake_depends \""
          << this->GlobalGenerator->GetName() << "\" "
-         << this->Convert(this->Makefile->GetHomeDirectory(),
+         << this->Convert(this->LocalGenerator->GetSourceDirectory(),
                           cmLocalGenerator::FULL, cmLocalGenerator::SHELL)
          << " "
-         << this->Convert(this->Makefile->GetCurrentSourceDirectory(),
+         << this->Convert(this->LocalGenerator->GetCurrentSourceDirectory(),
                           cmLocalGenerator::FULL, cmLocalGenerator::SHELL)
          << " "
-         << this->Convert(this->Makefile->GetHomeOutputDirectory(),
+         << this->Convert(this->LocalGenerator->GetBinaryDirectory(),
                           cmLocalGenerator::FULL, cmLocalGenerator::SHELL)
          << " "
-         << this->Convert(this->Makefile->GetCurrentBinaryDirectory(),
+         << this->Convert(this->LocalGenerator->GetCurrentBinaryDirectory(),
                           cmLocalGenerator::FULL, cmLocalGenerator::SHELL)
          << " "
          << this->Convert(this->InfoFileNameFull,
@@ -1149,7 +1151,7 @@ cmMakefileTargetGenerator
 {
   // Depend on all custom command outputs.
   std::vector<cmSourceFile*> sources;
-  this->Target->GetSourceFiles(sources,
+  this->GeneratorTarget->GetSourceFiles(sources,
                       this->Makefile->GetSafeDefinition("CMAKE_BUILD_TYPE"));
   for(std::vector<cmSourceFile*>::const_iterator source = sources.begin();
       source != sources.end(); ++source)
@@ -1242,7 +1244,7 @@ void
 cmMakefileTargetGenerator
 ::MakeEchoProgress(cmLocalUnixMakefileGenerator3::EchoProgress& progress) const
 {
-  progress.Dir = this->Makefile->GetHomeOutputDirectory();
+  progress.Dir = this->LocalGenerator->GetBinaryDirectory();
   progress.Dir += cmake::GetCMakeFilesDirectory();
   std::ostringstream progressArg;
   progressArg << "$(CMAKE_PROGRESS_" << this->NumberOfProgressActions << ")";

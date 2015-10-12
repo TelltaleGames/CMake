@@ -336,10 +336,10 @@ bool cmGlobalVisualStudio8Generator::AddCheckTarget()
   cmCustomCommandLine commandLine;
   commandLine.push_back(cmSystemTools::GetCMakeCommand());
   std::string argH = "-H";
-  argH += mf->GetHomeDirectory();
+  argH += lg->GetSourceDirectory();
   commandLine.push_back(argH);
   std::string argB = "-B";
-  argB += mf->GetHomeOutputDirectory();
+  argB += lg->GetBinaryDirectory();
   commandLine.push_back(argB);
   commandLine.push_back("--check-stamp-list");
   commandLine.push_back(stampList.c_str());
@@ -360,7 +360,7 @@ bool cmGlobalVisualStudio8Generator::AddCheckTarget()
        no_main_dependency, commandLines, "Checking Build System",
        no_working_directory, true))
     {
-    tgt->AddSource(file->GetFullPath());
+    gt->AddSource(file->GetFullPath());
     }
   else
     {
@@ -372,13 +372,9 @@ bool cmGlobalVisualStudio8Generator::AddCheckTarget()
 }
 
 //----------------------------------------------------------------------------
-bool cmGlobalVisualStudio8Generator::Compute()
+void cmGlobalVisualStudio8Generator::AddExtraIDETargets()
 {
-  if (!cmGlobalVisualStudio7Generator::Compute())
-    {
-    return false;
-    }
-
+  cmGlobalVisualStudio7Generator::AddExtraIDETargets();
   if(this->AddCheckTarget())
     {
     // All targets depend on the build-system check target.
@@ -392,7 +388,6 @@ bool cmGlobalVisualStudio8Generator::Compute()
         }
       }
     }
-  return true;
 }
 
 //----------------------------------------------------------------------------

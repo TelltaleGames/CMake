@@ -58,7 +58,7 @@ void cmNinjaUtilityTargetGenerator::Generate()
   std::vector<cmSourceFile*> sources;
   std::string config = this->GetMakefile()
                            ->GetSafeDefinition("CMAKE_BUILD_TYPE");
-  this->GetTarget()->GetSourceFiles(sources, config);
+  this->GetGeneratorTarget()->GetSourceFiles(sources, config);
   for(std::vector<cmSourceFile*>::const_iterator source = sources.begin();
       source != sources.end(); ++source)
     {
@@ -103,13 +103,13 @@ void cmNinjaUtilityTargetGenerator::Generate()
       command,
       "$(CMAKE_SOURCE_DIR)",
       this->GetLocalGenerator()->ConvertToOutputFormat(
-        this->GetTarget()->GetMakefile()->GetHomeDirectory(),
+        this->GetLocalGenerator()->GetSourceDirectory(),
         cmLocalGenerator::SHELL).c_str());
     cmSystemTools::ReplaceString(
       command,
       "$(CMAKE_BINARY_DIR)",
       this->GetLocalGenerator()->ConvertToOutputFormat(
-        this->GetTarget()->GetMakefile()->GetHomeOutputDirectory(),
+        this->GetLocalGenerator()->GetBinaryDirectory(),
         cmLocalGenerator::SHELL).c_str());
     cmSystemTools::ReplaceString(command, "$(ARGS)", "");
 

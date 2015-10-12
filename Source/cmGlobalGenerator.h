@@ -83,7 +83,8 @@ public:
    */
   virtual void Configure();
 
-  virtual bool Compute();
+  bool Compute();
+  virtual void AddExtraIDETargets() {}
 
   enum TargetTypes {
     AllTargets,
@@ -384,7 +385,7 @@ protected:
 
   virtual bool CheckALLOW_DUPLICATE_CUSTOM_TARGETS() const;
 
-  std::vector<cmTarget const*> CreateQtAutoGeneratorsTargets();
+  std::vector<const cmGeneratorTarget*> CreateQtAutoGeneratorsTargets();
 
   std::string SelectMakeProgram(const std::string& makeProgram,
                                 const std::string& makeDefault = "") const;

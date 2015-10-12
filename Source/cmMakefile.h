@@ -274,11 +274,6 @@ public:
    */
   void SetProjectName(std::string const& name);
 
-  /**
-   * Get the name of the project for this build.
-   */
-  std::string GetProjectName() const;
-
   /** Get the configurations to be generated.  */
   std::string GetConfigurations(std::vector<std::string>& configs,
                                 bool single = true) const;
@@ -353,9 +348,7 @@ public:
    */
   void SetArgcArgv(const std::vector<std::string>& args);
 
-  void SetCurrentSourceDirectory(const std::string& dir);
   const char* GetCurrentSourceDirectory() const;
-  void SetCurrentBinaryDirectory(const std::string& dir);
   const char* GetCurrentBinaryDirectory() const;
 
   //@}

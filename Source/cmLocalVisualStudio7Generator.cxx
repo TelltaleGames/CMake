@@ -112,7 +112,9 @@ void cmLocalVisualStudio7Generator::AddCMakeListsRules()
           }
         if(l->first != CMAKE_CHECK_BUILD_SYSTEM_TARGET)
           {
-          l->second.AddSource(sf->GetFullPath());
+          cmGeneratorTarget* gt =
+              this->GlobalGenerator->GetGeneratorTarget(&l->second);
+          gt->AddSource(sf->GetFullPath());
           }
         }
       }
@@ -138,7 +140,7 @@ void cmLocalVisualStudio7Generator::FixGlobalTargets()
       cmCustomCommandLines force_commands;
       force_commands.push_back(force_command);
       std::string no_main_dependency = "";
-      std::string force = this->Makefile->GetCurrentBinaryDirectory();
+      std::string force = this->GetCurrentBinaryDirectory();
       force += cmake::GetCMakeFilesDirectory();
       force += "/";
       force += tgt.GetName();
@@ -148,7 +150,9 @@ void cmLocalVisualStudio7Generator::FixGlobalTargets()
            force.c_str(), no_depends, no_main_dependency,
            force_commands, " ", 0, true))
         {
-        tgt.AddSource(file->GetFullPath());
+        cmGeneratorTarget* gt =
+            this->GlobalGenerator->GetGeneratorTarget(&tgt);
+        gt->AddSource(file->GetFullPath());
         }
       }
     }
@@ -160,14 +164,14 @@ void cmLocalVisualStudio7Generator::FixGlobalTargets()
 void cmLocalVisualStudio7Generator::WriteProjectFiles()
 {
   // If not an in source build, then create the output directory
-  if(strcmp(this->Makefile->GetCurrentBinaryDirectory(),
-            this->Makefile->GetHomeDirectory()) != 0)
+  if(strcmp(this->GetCurrentBinaryDirectory(),
+            this->GetSourceDirectory()) != 0)
     {
     if(!cmSystemTools::MakeDirectory
-       (this->Makefile->GetCurrentBinaryDirectory()))
+       (this->GetCurrentBinaryDirectory()))
       {
       cmSystemTools::Error("Error creating directory ",
-                           this->Makefile->GetCurrentBinaryDirectory());
+                           this->GetCurrentBinaryDirectory());
       }
     }
 
@@ -196,7 +200,7 @@ void cmLocalVisualStudio7Generator::WriteStampFiles()
 {
   // Touch a timestamp file used to determine when the project file is
   // out of date.
-  std::string stampName = this->Makefile->GetCurrentBinaryDirectory();
+  std::string stampName = this->GetCurrentBinaryDirectory();
   stampName += cmake::GetCMakeFilesDirectory();
   cmSystemTools::MakeDirectory(stampName.c_str());
   stampName += "/";
@@ -243,7 +247,7 @@ void cmLocalVisualStudio7Generator
   target.SetProperty("GENERATOR_FILE_NAME",lname.c_str());
   // create the dsp.cmake file
   std::string fname;
-  fname = this->Makefile->GetCurrentBinaryDirectory();
+  fname = this->GetCurrentBinaryDirectory();
   fname += "/";
   fname += lname;
   if(this->FortranProject)
@@ -272,13 +276,13 @@ void cmLocalVisualStudio7Generator
 //----------------------------------------------------------------------------
 cmSourceFile* cmLocalVisualStudio7Generator::CreateVCProjBuildRule()
 {
-  std::string stampName = this->Makefile->GetCurrentBinaryDirectory();
+  std::string stampName = this->GetCurrentBinaryDirectory();
   stampName += "/";
   stampName += cmake::GetCMakeFilesDirectoryPostSlash();
   stampName += "generate.stamp";
   cmCustomCommandLine commandLine;
   commandLine.push_back(cmSystemTools::GetCMakeCommand());
-  std::string makefileIn = this->Makefile->GetCurrentSourceDirectory();
+  std::string makefileIn = this->GetCurrentSourceDirectory();
   makefileIn += "/";
   makefileIn += "CMakeLists.txt";
   makefileIn = cmSystemTools::CollapseFullPath(makefileIn.c_str());
@@ -290,10 +294,10 @@ cmSourceFile* cmLocalVisualStudio7Generator::CreateVCProjBuildRule()
   comment += makefileIn;
   std::string args;
   args = "-H";
-  args += this->Makefile->GetHomeDirectory();
+  args += this->GetSourceDirectory();
   commandLine.push_back(args);
   args = "-B";
-  args += this->Makefile->GetHomeOutputDirectory();
+  args += this->GetBinaryDirectory();
   commandLine.push_back(args);
   commandLine.push_back("--check-stamp-file");
   std::string stampFilename = this->Convert(stampName.c_str(), FULL,
@@ -789,7 +793,7 @@ void cmLocalVisualStudio7Generator::WriteConfiguration(std::ostream& fout,
     {
     std::string const& outDir =
       target.GetType() == cmTarget::OBJECT_LIBRARY?
-      intermediateDir : target.GetDirectory(configName);
+      intermediateDir : gt->GetDirectory(configName);
     fout << "\t\t\tOutputDirectory=\""
          << this->ConvertToXMLOutputPathSingle(outDir.c_str()) << "\"\n";
     }
@@ -1001,7 +1005,7 @@ void cmLocalVisualStudio7Generator::WriteConfiguration(std::ostream& fout,
 
     // Check if we need the FAT32 workaround.
     // Check the filesystem type where the target will be written.
-    if (cmLVS6G_IsFAT(target.GetDirectory(configName).c_str()))
+    if (cmLVS6G_IsFAT(gt->GetDirectory(configName).c_str()))
       {
       // Add a flag telling the manifest tool to use a workaround
       // for FAT32 file systems, which can cause an empty manifest
@@ -1127,7 +1131,7 @@ void cmLocalVisualStudio7Generator::OutputBuildTool(std::ostream& fout,
     case cmTarget::STATIC_LIBRARY:
     {
     std::string targetNameFull = gt->GetFullName(configName);
-    std::string libpath = target.GetDirectory(configName);
+    std::string libpath = gt->GetDirectory(configName);
     libpath += "/";
     libpath += targetNameFull;
     const char* tool = "VCLibrarianTool";
@@ -1207,7 +1211,7 @@ void cmLocalVisualStudio7Generator::OutputBuildTool(std::ostream& fout,
     fout << " ";
     this->Internal->OutputLibraries(fout, cli.GetItems());
     fout << "\"\n";
-    temp = target.GetDirectory(configName);
+    temp = gt->GetDirectory(configName);
     temp += "/";
     temp += targetNameFull;
     fout << "\t\t\t\tOutputFile=\""
@@ -1217,7 +1221,7 @@ void cmLocalVisualStudio7Generator::OutputBuildTool(std::ostream& fout,
     fout << "\t\t\t\tAdditionalLibraryDirectories=\"";
     this->OutputLibraryDirectories(fout, cli.GetDirectories());
     fout << "\"\n";
-    temp = target.GetPDBDirectory(configName);
+    temp = gt->GetPDBDirectory(configName);
     temp += "/";
     temp += targetNamePDB;
     fout << "\t\t\t\tProgramDatabaseFile=\"" <<
@@ -1245,7 +1249,7 @@ void cmLocalVisualStudio7Generator::OutputBuildTool(std::ostream& fout,
       {
       fout << "\t\t\t\tStackReserveSize=\"" << stackVal  << "\"\n";
       }
-    temp = target.GetDirectory(configName, true);
+    temp = gt->GetDirectory(configName, true);
     temp += "/";
     temp += targetNameImport;
     fout << "\t\t\t\tImportLibrary=\""
@@ -1306,7 +1310,7 @@ void cmLocalVisualStudio7Generator::OutputBuildTool(std::ostream& fout,
     fout << " ";
     this->Internal->OutputLibraries(fout, cli.GetItems());
     fout << "\"\n";
-    temp = target.GetDirectory(configName);
+    temp = gt->GetDirectory(configName);
     temp += "/";
     temp += targetNameFull;
     fout << "\t\t\t\tOutputFile=\""
@@ -1317,7 +1321,7 @@ void cmLocalVisualStudio7Generator::OutputBuildTool(std::ostream& fout,
     this->OutputLibraryDirectories(fout, cli.GetDirectories());
     fout << "\"\n";
     std::string path = this->ConvertToXMLOutputPathSingle(
-      target.GetPDBDirectory(configName).c_str());
+      gt->GetPDBDirectory(configName).c_str());
     fout << "\t\t\t\tProgramDatabaseFile=\""
          << path << "/" << targetNamePDB
          << "\"\n";
@@ -1364,7 +1368,7 @@ void cmLocalVisualStudio7Generator::OutputBuildTool(std::ostream& fout,
       {
       fout << "\t\t\t\tStackReserveSize=\"" << stackVal << "\"";
       }
-    temp = target.GetDirectory(configName, true);
+    temp = gt->GetDirectory(configName, true);
     temp += "/";
     temp += targetNameImport;
     fout << "\t\t\t\tImportLibrary=\""
@@ -1720,7 +1724,7 @@ cmLocalVisualStudio7Generator
   // files directory for any configuration.  This is used to construct
   // object file names that do not produce paths that are too long.
   std::string dir_max;
-  dir_max += this->Makefile->GetCurrentBinaryDirectory();
+  dir_max += this->GetCurrentBinaryDirectory();
   dir_max += "/";
   dir_max += this->GetTargetDirectory(target);
   dir_max += "/";

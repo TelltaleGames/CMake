@@ -120,15 +120,34 @@ cmMakefile::cmMakefile(cmGlobalGenerator* globalGenerator,
   this->AddSourceGroup("Object Files", "\\.(lo|o|obj)$");
 #endif
 
+  this->AddDefinition("CMAKE_SOURCE_DIR",
+                      this->GetCMakeInstance()->GetHomeDirectory());
+  this->AddDefinition("CMAKE_BINARY_DIR",
+                      this->GetCMakeInstance()->GetHomeOutputDirectory());
   {
-  const char* dir = this->GetCMakeInstance()->GetHomeDirectory();
-  this->AddDefinition("CMAKE_SOURCE_DIR", dir);
-  this->AddDefinition("CMAKE_CURRENT_SOURCE_DIR", dir);
+  const char* dir = this->StateSnapshot.GetDirectory().GetCurrentSource();
+  if (dir)
+    {
+    this->AddDefinition("CMAKE_CURRENT_SOURCE_DIR", dir);
+    }
+  else
+    {
+    this->AddDefinition("CMAKE_CURRENT_SOURCE_DIR",
+                        this->GetCMakeInstance()->GetHomeDirectory());
+    }
   }
   {
-  const char* dir = this->GetCMakeInstance()->GetHomeOutputDirectory();
-  this->AddDefinition("CMAKE_BINARY_DIR", dir);
-  this->AddDefinition("CMAKE_CURRENT_BINARY_DIR", dir);
+  const char* dir = this->StateSnapshot.GetDirectory().GetCurrentBinary();
+  if (dir)
+    {
+    cmSystemTools::MakeDirectory(dir);
+    this->AddDefinition("CMAKE_CURRENT_BINARY_DIR", dir);
+    }
+  else
+    {
+    this->AddDefinition("CMAKE_CURRENT_BINARY_DIR",
+                        this->GetCMakeInstance()->GetHomeOutputDirectory());
+    }
   }
 }
 
@@ -142,9 +161,6 @@ cmMakefile::~cmMakefile()
   cmDeleteAll(this->FinalPassCommands);
   cmDeleteAll(this->FunctionBlockers);
   cmDeleteAll(this->EvaluationFiles);
-  this->EvaluationFiles.clear();
-
-  this->FunctionBlockers.clear();
 }
 
 //----------------------------------------------------------------------------
@@ -1472,13 +1488,6 @@ void cmMakefile::AddLinkLibrary(const std::string& lib)
 
 void cmMakefile::InitializeFromParent(cmMakefile* parent)
 {
-  this->StateSnapshot.InitializeFromParent();
-
-  this->AddDefinition("CMAKE_CURRENT_SOURCE_DIR",
-                      this->GetCurrentSourceDirectory());
-  this->AddDefinition("CMAKE_CURRENT_BINARY_DIR",
-                      this->GetCurrentBinaryDirectory());
-
   this->SystemIncludeDirectories = parent->SystemIncludeDirectories;
 
   // define flags
@@ -1517,7 +1526,7 @@ void cmMakefile::InitializeFromParent(cmMakefile* parent)
                     parent->GetProperty("LINK_DIRECTORIES"));
 
   // the initial project name
-  this->SetProjectName(parent->GetProjectName());
+  this->StateSnapshot.SetProjectName(parent->StateSnapshot.GetProjectName());
 
   // Copy include regular expressions.
   this->ComplainFileRegularExpression = parent->ComplainFileRegularExpression;
@@ -1749,12 +1758,12 @@ void cmMakefile::AddSubDirectory(const std::string& srcPath,
                                            this->ContextStack.back()->Name,
                                            this->ContextStack.back()->Line);
 
+  newSnapshot.GetDirectory().SetCurrentSource(srcPath);
+  newSnapshot.GetDirectory().SetCurrentBinary(binPath);
+
   cmMakefile* subMf = new cmMakefile(this->GlobalGenerator, newSnapshot);
   this->GetGlobalGenerator()->AddMakefile(subMf);
 
-  // set the subdirs start dirs
-  subMf->SetCurrentSourceDirectory(srcPath);
-  subMf->SetCurrentBinaryDirectory(binPath);
   if(excludeFromAll)
     {
     subMf->SetProperty("EXCLUDE_FROM_ALL", "TRUE");
@@ -1770,24 +1779,9 @@ void cmMakefile::AddSubDirectory(const std::string& srcPath,
     }
 }
 
-void cmMakefile::SetCurrentSourceDirectory(const std::string& dir)
-{
-  this->StateSnapshot.GetDirectory().SetCurrentSource(dir);
-  this->AddDefinition("CMAKE_CURRENT_SOURCE_DIR",
-                      this->StateSnapshot.GetDirectory().GetCurrentSource());
-}
-
 const char* cmMakefile::GetCurrentSourceDirectory() const
 {
   return this->StateSnapshot.GetDirectory().GetCurrentSource();
-}
-
-void cmMakefile::SetCurrentBinaryDirectory(const std::string& dir)
-{
-  this->StateSnapshot.GetDirectory().SetCurrentBinary(dir);
-  const char* binDir = this->StateSnapshot.GetDirectory().GetCurrentBinary();
-  cmSystemTools::MakeDirectory(binDir);
-  this->AddDefinition("CMAKE_CURRENT_BINARY_DIR", binDir);
 }
 
 const char* cmMakefile::GetCurrentBinaryDirectory() const
@@ -1911,13 +1905,13 @@ void cmMakefile::AddCacheDefinition(const std::string& name, const char* value,
         nvalue += files[cc];
         }
 
-      this->GetState()->AddCacheEntry(name, nvalue.c_str(), doc, type);
+      this->GetCMakeInstance()->AddCacheEntry(name, nvalue.c_str(), doc, type);
       val = this->GetState()->GetInitializedCacheValue(name);
       haveVal = true;
       }
 
     }
-  this->GetState()->AddCacheEntry(name, haveVal ? val.c_str() : 0,
+  this->GetCMakeInstance()->AddCacheEntry(name, haveVal ? val.c_str() : 0,
                                           doc, type);
   // if there was a definition then remove it
   this->StateSnapshot.RemoveDefinition(name);
@@ -2031,11 +2025,6 @@ void cmMakefile::RemoveCacheDefinition(const std::string& name)
 void cmMakefile::SetProjectName(std::string const& p)
 {
   this->StateSnapshot.SetProjectName(p);
-}
-
-std::string cmMakefile::GetProjectName() const
-{
-  return this->StateSnapshot.GetProjectName();
 }
 
 void cmMakefile::AddGlobalLinkInformation(const std::string& name,

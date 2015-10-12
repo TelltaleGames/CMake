@@ -284,7 +284,7 @@ cmComputeLinkInformation
 
   // Check whether we should skip dependencies on shared library files.
   this->LinkDependsNoShared =
-    this->Target->Target->GetPropertyAsBool("LINK_DEPENDS_NO_SHARED");
+    this->Target->GetPropertyAsBool("LINK_DEPENDS_NO_SHARED");
 
   // On platforms without import libraries there may be a special flag
   // to use when creating a plugin (module) that obtains symbols from
@@ -521,7 +521,7 @@ bool cmComputeLinkInformation::Compute()
   // Restore the target link type so the correct system runtime
   // libraries are found.
   const char* lss =
-      this->Target->Target->GetProperty("LINK_SEARCH_END_STATIC");
+      this->Target->GetProperty("LINK_SEARCH_END_STATIC");
   if(cmSystemTools::IsOn(lss))
     {
     this->SetCurrentLinkType(LinkStatic);
@@ -632,11 +632,11 @@ void cmComputeLinkInformation::AddImplicitLinkInfo(std::string const& lang)
 
 //----------------------------------------------------------------------------
 void cmComputeLinkInformation::AddItem(std::string const& item,
-                                       cmTarget const* tgt)
+                                       cmGeneratorTarget const* tgt)
 {
   // Compute the proper name to use to link this library.
   const std::string& config = this->Config;
-  bool impexe = (tgt && tgt->IsExecutableWithExports());
+  bool impexe = (tgt && tgt->Target->IsExecutableWithExports());
   if(impexe && !this->UseImportLibrary && !this->LoaderFlag)
     {
     // Skip linking to executables on platforms with no import
@@ -644,9 +644,8 @@ void cmComputeLinkInformation::AddItem(std::string const& item,
     return;
     }
 
-  if(tgt && tgt->IsLinkable())
+  if(tgt && tgt->Target->IsLinkable())
     {
-    cmGeneratorTarget *gtgt = this->GlobalGenerator->GetGeneratorTarget(tgt);
     // This is a CMake target.  Ask the target for its real name.
     if(impexe && this->LoaderFlag)
       {
@@ -656,10 +655,10 @@ void cmComputeLinkInformation::AddItem(std::string const& item,
       std::string linkItem;
       linkItem = this->LoaderFlag;
 
-      std::string exe = gtgt->GetFullPath(config, this->UseImportLibrary,
+      std::string exe = tgt->GetFullPath(config, this->UseImportLibrary,
                                          true);
       linkItem += exe;
-      this->Items.push_back(Item(linkItem, true, tgt));
+      this->Items.push_back(Item(linkItem, true, tgt->Target));
       this->Depends.push_back(exe);
       }
     else if(tgt->GetType() == cmTarget::INTERFACE_LIBRARY)
@@ -667,7 +666,7 @@ void cmComputeLinkInformation::AddItem(std::string const& item,
       // Add the interface library as an item so it can be considered as part
       // of COMPATIBLE_INTERFACE_ enforcement.  The generators will ignore
       // this for the actual link line.
-      this->Items.push_back(Item(std::string(), true, tgt));
+      this->Items.push_back(Item(std::string(), true, tgt->Target));
       }
     else
       {
@@ -677,15 +676,15 @@ void cmComputeLinkInformation::AddItem(std::string const& item,
          (impexe || tgt->GetType() == cmTarget::SHARED_LIBRARY));
 
       // Pass the full path to the target file.
-      std::string lib = gtgt->GetFullPath(config, implib, true);
+      std::string lib = tgt->GetFullPath(config, implib, true);
       if(!this->LinkDependsNoShared ||
          tgt->GetType() != cmTarget::SHARED_LIBRARY)
         {
         this->Depends.push_back(lib);
         }
 
-      this->AddTargetItem(lib, tgt);
-      this->AddLibraryRuntimeInfo(lib, tgt);
+      this->AddTargetItem(lib, tgt->Target);
+      this->AddLibraryRuntimeInfo(lib, tgt->Target);
       }
     }
   else
@@ -716,7 +715,7 @@ void cmComputeLinkInformation::AddItem(std::string const& item,
 
 //----------------------------------------------------------------------------
 void cmComputeLinkInformation::AddSharedDepItem(std::string const& item,
-                                                cmTarget const* tgt)
+                                                const cmGeneratorTarget* tgt)
 {
   // If dropping shared library dependencies, ignore them.
   if(this->SharedDependencyMode == SharedDepModeNone)
@@ -760,18 +759,14 @@ void cmComputeLinkInformation::AddSharedDepItem(std::string const& item,
     return;
     }
 
-  cmGeneratorTarget *gtgt = 0;
-
   // Get a full path to the dependent shared library.
   // Add it to the runtime path computation so that the target being
   // linked will be able to find it.
   std::string lib;
   if(tgt)
     {
-    gtgt = this->GlobalGenerator->GetGeneratorTarget(tgt);
-
-    lib = gtgt->GetFullPath(this->Config, this->UseImportLibrary);
-    this->AddLibraryRuntimeInfo(lib, tgt);
+    lib = tgt->GetFullPath(this->Config, this->UseImportLibrary);
+    this->AddLibraryRuntimeInfo(lib, tgt->Target);
     }
   else
     {
@@ -795,9 +790,9 @@ void cmComputeLinkInformation::AddSharedDepItem(std::string const& item,
     }
   if(order)
     {
-    if(gtgt)
+    if(tgt)
       {
-      std::string soName = gtgt->GetSOName(this->Config);
+      std::string soName = tgt->GetSOName(this->Config);
       const char* soname = soName.empty()? 0 : soName.c_str();
       order->AddRuntimeLibrary(lib, soname);
       }
@@ -860,7 +855,7 @@ void cmComputeLinkInformation::ComputeLinkTypeInfo()
 
   // Lookup the starting link type from the target (linked statically?).
   const char* lss =
-      this->Target->Target->GetProperty("LINK_SEARCH_START_STATIC");
+      this->Target->GetProperty("LINK_SEARCH_START_STATIC");
   this->StartLinkType = cmSystemTools::IsOn(lss)? LinkStatic : LinkShared;
   this->CurrentLinkType = this->StartLinkType;
 }
@@ -1101,9 +1096,10 @@ void cmComputeLinkInformation::AddTargetItem(std::string const& item,
     this->SharedLibrariesLinked.insert(target);
     }
 
+  cmGeneratorTarget *gtgt = this->GlobalGenerator->GetGeneratorTarget(target);
   // Handle case of an imported shared library with no soname.
   if(this->NoSONameUsesPath &&
-     target->IsImportedSharedLibWithoutSOName(this->Config))
+     gtgt->IsImportedSharedLibWithoutSOName(this->Config))
     {
     this->AddSharedLibNoSOName(item);
     return;
@@ -1783,12 +1779,13 @@ void
 cmComputeLinkInformation::AddLibraryRuntimeInfo(std::string const& fullPath,
                                                 cmTarget const* target)
 {
+  cmGeneratorTarget *gtgt = this->GlobalGenerator->GetGeneratorTarget(target);
   // Ignore targets on Apple where install_name is not @rpath.
   // The dependenty library can be found with other means such as
   // @loader_path or full paths.
   if(this->Makefile->IsOn("CMAKE_PLATFORM_HAS_INSTALLNAME"))
     {
-    if(!target->HasMacOSXRpathInstallNameDir(this->Config))
+    if(!gtgt->HasMacOSXRpathInstallNameDir(this->Config))
       {
       return;
       }
@@ -1810,7 +1807,6 @@ cmComputeLinkInformation::AddLibraryRuntimeInfo(std::string const& fullPath,
 
   // Try to get the soname of the library.  Only files with this name
   // could possibly conflict.
-  cmGeneratorTarget *gtgt = this->GlobalGenerator->GetGeneratorTarget(target);
   std::string soName = gtgt->GetSOName(this->Config);
   const char* soname = soName.empty()? 0 : soName.c_str();
 
@@ -1918,9 +1914,9 @@ void cmComputeLinkInformation::GetRPath(std::vector<std::string>& runtimeDirs,
   // build tree.
   bool linking_for_install =
     (for_install ||
-     this->Target->Target->GetPropertyAsBool("BUILD_WITH_INSTALL_RPATH"));
+     this->Target->GetPropertyAsBool("BUILD_WITH_INSTALL_RPATH"));
   bool use_install_rpath =
-    (outputRuntime && this->Target->Target->HaveInstallTreeRPATH() &&
+    (outputRuntime && this->Target->HaveInstallTreeRPATH() &&
      linking_for_install);
   bool use_build_rpath =
     (outputRuntime && this->Target->HaveBuildTreeRPATH(this->Config) &&
@@ -1928,14 +1924,14 @@ void cmComputeLinkInformation::GetRPath(std::vector<std::string>& runtimeDirs,
   bool use_link_rpath =
     outputRuntime && linking_for_install &&
     !this->Makefile->IsOn("CMAKE_SKIP_INSTALL_RPATH") &&
-    this->Target->Target->GetPropertyAsBool("INSTALL_RPATH_USE_LINK_PATH");
+    this->Target->GetPropertyAsBool("INSTALL_RPATH_USE_LINK_PATH");
 
   // Construct the RPATH.
   std::set<std::string> emitted;
   if(use_install_rpath)
     {
     const char* install_rpath =
-        this->Target->Target->GetProperty("INSTALL_RPATH");
+        this->Target->GetProperty("INSTALL_RPATH");
     cmCLI_ExpandListUnique(install_rpath, runtimeDirs, emitted);
     }
   if(use_build_rpath || use_link_rpath)
@@ -1975,8 +1971,9 @@ void cmComputeLinkInformation::GetRPath(std::vector<std::string>& runtimeDirs,
       else if(use_link_rpath)
         {
         // Do not add any path inside the source or build tree.
-        const char* topSourceDir = this->Makefile->GetHomeDirectory();
-        const char* topBinaryDir = this->Makefile->GetHomeOutputDirectory();
+        const char* topSourceDir = this->CMakeInstance->GetHomeDirectory();
+        const char* topBinaryDir =
+            this->CMakeInstance->GetHomeOutputDirectory();
         if(!cmSystemTools::ComparePath(*ri, topSourceDir) &&
            !cmSystemTools::ComparePath(*ri, topBinaryDir) &&
            !cmSystemTools::IsSubDirectory(*ri, topSourceDir) &&

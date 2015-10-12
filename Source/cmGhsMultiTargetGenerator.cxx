@@ -27,7 +27,7 @@ cmGhsMultiTargetGenerator::cmGhsMultiTargetGenerator(cmGeneratorTarget *target)
   , LocalGenerator(static_cast<cmLocalGhsMultiGenerator *>(
                      target->GetLocalGenerator()))
   , Makefile(target->Target->GetMakefile())
-  , TargetGroup(DetermineIfTargetGroup(target->Target))
+  , TargetGroup(DetermineIfTargetGroup(target))
   , DynamicDownload(false)
 {
   this->RelBuildFilePath = this->GetRelBuildFilePath(target->Target);
@@ -68,7 +68,9 @@ cmGhsMultiTargetGenerator::GetRelBuildFilePath(const cmTarget *target)
 std::string
 cmGhsMultiTargetGenerator::GetAbsPathToRoot(const cmTarget *target)
 {
-  return target->GetMakefile()->GetHomeOutputDirectory();
+  cmGeneratorTarget* gt = target->GetMakefile()->GetGlobalGenerator()
+      ->GetGeneratorTarget(target);
+  return gt->GetLocalGenerator()->GetBinaryDirectory();
 }
 
 std::string
@@ -172,16 +174,17 @@ std::vector<cmSourceFile *> cmGhsMultiTargetGenerator::GetSources() const
 {
   std::vector<cmSourceFile *> output;
   std::string config = this->Makefile->GetSafeDefinition("CMAKE_BUILD_TYPE");
-  this->Target->GetSourceFiles(output, config);
+  this->GeneratorTarget->GetSourceFiles(output, config);
   return output;
 }
 
 GhsMultiGpj::Types cmGhsMultiTargetGenerator::GetGpjTag() const
 {
-  return cmGhsMultiTargetGenerator::GetGpjTag(this->Target);
+  return cmGhsMultiTargetGenerator::GetGpjTag(this->GeneratorTarget);
 }
 
-GhsMultiGpj::Types cmGhsMultiTargetGenerator::GetGpjTag(const cmTarget *target)
+GhsMultiGpj::Types cmGhsMultiTargetGenerator::GetGpjTag(
+    const cmGeneratorTarget *target)
 {
   GhsMultiGpj::Types output;
   if (cmGhsMultiTargetGenerator::DetermineIfTargetGroup(target))
@@ -449,7 +452,7 @@ void cmGhsMultiTargetGenerator::WriteSources(
     cmSystemTools::ConvertToUnixSlashes(sgPath);
     cmGlobalGhsMultiGenerator::AddFilesUpToPath(
       this->GetFolderBuildStreams(), &this->FolderBuildStreams,
-      this->Makefile->GetHomeOutputDirectory(), sgPath,
+      this->LocalGenerator->GetBinaryDirectory(), sgPath,
       GhsMultiGpj::SUBPROJECT, this->RelBuildFilePath);
 
     std::string fullSourcePath((*si)->GetFullPath());
@@ -566,12 +569,13 @@ bool cmGhsMultiTargetGenerator::IsNotKernel(std::string const &config,
   return output;
 }
 
-bool cmGhsMultiTargetGenerator::DetermineIfTargetGroup(const cmTarget *target)
+bool cmGhsMultiTargetGenerator::DetermineIfTargetGroup(
+    const cmGeneratorTarget *target)
 {
   bool output = false;
   std::vector<cmSourceFile *> sources;
   std::string config =
-      target->GetMakefile()->GetSafeDefinition("CMAKE_BUILD_TYPE");
+      target->Target->GetMakefile()->GetSafeDefinition("CMAKE_BUILD_TYPE");
   target->GetSourceFiles(sources, config);
   for (std::vector<cmSourceFile *>::const_iterator sources_i = sources.begin();
        sources.end() != sources_i; ++sources_i)

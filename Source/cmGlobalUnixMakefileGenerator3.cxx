@@ -163,7 +163,7 @@ void cmGlobalUnixMakefileGenerator3::Generate()
     {
     cmLocalUnixMakefileGenerator3 *lg =
       static_cast<cmLocalUnixMakefileGenerator3 *>(this->LocalGenerators[i]);
-    std::string markFileName = lg->GetMakefile()->GetCurrentBinaryDirectory();
+    std::string markFileName = lg->GetCurrentBinaryDirectory();
     markFileName += "/";
     markFileName += cmake::GetCMakeFilesDirectory();
     markFileName += "/progress.marks";
@@ -395,7 +395,7 @@ void cmGlobalUnixMakefileGenerator3::WriteMainCMakefile()
     {
     lg =
       static_cast<cmLocalUnixMakefileGenerator3 *>(this->LocalGenerators[i]);
-    tmpStr = lg->GetMakefile()->GetCurrentBinaryDirectory();
+    tmpStr = lg->GetCurrentBinaryDirectory();
     tmpStr += cmake::GetCMakeFilesDirectory();
     tmpStr += "/CMakeDirectoryInformation.cmake";
     cmakefileStream << "  \"" <<
@@ -454,7 +454,7 @@ cmGlobalUnixMakefileGenerator3
                       bool check_relink)
 {
   // Get the relative path to the subdirectory from the top.
-  std::string makeTarget = lg->GetMakefile()->GetCurrentBinaryDirectory();
+  std::string makeTarget = lg->GetCurrentBinaryDirectory();
   makeTarget += "/";
   makeTarget += pass;
 
@@ -495,7 +495,7 @@ cmGlobalUnixMakefileGenerator3
   // The directory-level rule should depend on the directory-level
   // rules of the subdirectories.
   std::vector<cmState::Snapshot> children
-      = lg->GetMakefile()->GetStateSnapshot().GetChildren();
+      = lg->GetStateSnapshot().GetChildren();
   for(std::vector<cmState::Snapshot>::const_iterator
         ci = children.begin(); ci != children.end(); ++ci)
     {
@@ -534,7 +534,7 @@ cmGlobalUnixMakefileGenerator3
     }
 
   // Begin the directory-level rules section.
-  std::string dir = lg->GetMakefile()->GetCurrentBinaryDirectory();
+  std::string dir = lg->GetCurrentBinaryDirectory();
   dir = lg->Convert(dir, cmLocalGenerator::HOME_OUTPUT,
                     cmLocalGenerator::MAKERULE);
   lg->WriteDivider(ruleFileStream);
@@ -585,12 +585,11 @@ void cmGlobalUnixMakefileGenerator3
     else
       {
       cmState::Snapshot snapshot = this->CMakeInstance->GetCurrentSnapshot();
-      mf = new cmMakefile(this, snapshot);
-      // set the Start directories
-      mf->SetCurrentSourceDirectory
+      snapshot.GetDirectory().SetCurrentSource
         (this->CMakeInstance->GetHomeDirectory());
-      mf->SetCurrentBinaryDirectory
+      snapshot.GetDirectory().SetCurrentBinary
         (this->CMakeInstance->GetHomeOutputDirectory());
+      mf = new cmMakefile(this, snapshot);
       }
 
     std::string tname = targetName;
@@ -785,7 +784,7 @@ cmGlobalUnixMakefileGenerator3
       depends.clear();
 
       cmLocalUnixMakefileGenerator3::EchoProgress progress;
-      progress.Dir = lg->GetMakefile()->GetHomeOutputDirectory();
+      progress.Dir = lg->GetBinaryDirectory();
       progress.Dir += cmake::GetCMakeFilesDirectory();
       {
       std::ostringstream progressArg;
@@ -938,7 +937,7 @@ void cmGlobalUnixMakefileGenerator3::InitializeProgressMarks()
       cmLocalGenerator* tlg = gt->GetLocalGenerator();
 
       if(gt->GetType() == cmTarget::INTERFACE_LIBRARY
-          || gt->Target->GetPropertyAsBool("EXCLUDE_FROM_ALL"))
+          || gt->GetPropertyAsBool("EXCLUDE_FROM_ALL"))
         {
         continue;
         }

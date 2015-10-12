@@ -171,7 +171,7 @@ public:
 
   /** Get the include flags for the current makefile and language.  */
   void GetIncludeDirectories(std::vector<std::string>& dirs,
-                             cmGeneratorTarget* target,
+                             cmGeneratorTarget const* target,
                              const std::string& lang = "C",
                              const std::string& config = "",
                              bool stripImplicitInclDirs = true) const;
@@ -182,12 +182,14 @@ public:
                              const std::string& config,
                              const std::string& lang);
 
+  std::string GetProjectName() const;
+
   /** Compute the language used to compile the given source file.  */
   std::string GetSourceFileLanguage(const cmSourceFile& source);
 
   // Fill the vector with the target names for the object files,
   // preprocessed files and assembly files.
-  virtual void GetIndividualFileTargets(std::vector<std::string>&) {}
+  void GetIndividualFileTargets(std::vector<std::string>&) {}
 
   // Create a struct to hold the varibles passed into
   // ExpandRuleVariables
@@ -250,6 +252,14 @@ public:
    * Test whether compatibility is set to a given version or lower.
    */
   bool NeedBackwardsCompatibility_2_4();
+
+  cmake* GetCMakeInstance() const;
+
+  const char* GetSourceDirectory() const;
+  const char* GetBinaryDirectory() const;
+
+  const char* GetCurrentBinaryDirectory() const;
+  const char* GetCurrentSourceDirectory() const;
 
   /**
    * Generate a Mac OS X application bundle Info.plist file.
