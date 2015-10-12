@@ -84,7 +84,6 @@ private:
   void WritePlatformExtensions();
   void WriteSinglePlatformExtension(std::string const& extension,
                                     std::string const& version);
-  void WriteSDKReferences();
   void WriteSingleSDKReference(std::string const& extension,
                                std::string const& version);
   void WriteCommonMissingFiles(const std::string& manifestFile);

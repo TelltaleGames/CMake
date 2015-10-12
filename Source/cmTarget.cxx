@@ -1865,7 +1865,6 @@ void cmTarget::InsertCompileOption(std::string const& entry,
 
   this->Internal->CompileOptionsEntries.insert(position, entry);
   this->Internal->CompileOptionsBacktraces.insert(btPosition, bt);
-    cmSystemTools::ExpandListArgument(evaluatedExpr, entryIncludes);
 }
 
 //----------------------------------------------------------------------------

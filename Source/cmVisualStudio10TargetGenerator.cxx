@@ -530,7 +530,7 @@ void cmVisualStudio10TargetGenerator::Generate()
   this->WritePRIResources();
   this->WriteWinRTReferences();
   this->WriteProjectReferences();
-  this->WriteSDKReferences();
+
   this->WriteString(
     "<Import Project=\"$(VCTargetsPath)\\Microsoft.Cpp.targets\""
     " />\n", 1);
@@ -571,27 +571,6 @@ void cmVisualStudio10TargetGenerator::WriteDotNetReferences()
       }
     this->WriteString("</ItemGroup>\n", 1);
     }
-}
-
-void cmVisualStudio10TargetGenerator::WriteSDKReferences()
-{
-	std::vector<std::string> references;
-	if(const char* vsSDKReferences =
-		this->Target->GetProperty("VS_SDK_REFERENCES"))
-	{
-		cmSystemTools::ExpandListArgument(vsSDKReferences, references);
-	}
-	if(!references.empty())
-	{
-		this->WriteString("<ItemGroup>\n", 1);
-		for(std::vector<std::string>::iterator ri = references.begin();
-			ri != references.end(); ++ri)
-		{
-			this->WriteString("<SDKReference Include=\"", 2);
-			(*this->BuildFileStream) << cmVS10EscapeXML(*ri) << "\"/>\n";
-		}
-		this->WriteString("</ItemGroup>\n", 1);
-	}
 }
 
 void cmVisualStudio10TargetGenerator::WriteEmbeddedResourceGroup()
@@ -3312,6 +3291,24 @@ void cmVisualStudio10TargetGenerator::WriteSinglePlatformExtension(
 
 void cmVisualStudio10TargetGenerator::WriteSDKReferences()
 {
+	std::vector<std::string> references;
+	if (const char* vsSDKReferences =
+		this->Target->GetProperty("VS_SDK_REFERENCES"))
+	{
+		cmSystemTools::ExpandListArgument(vsSDKReferences, references);
+	}
+	if (!references.empty())
+	{
+		this->WriteString("<ItemGroup>\n", 1);
+		for (std::vector<std::string>::iterator ri = references.begin();
+		ri != references.end(); ++ri)
+		{
+			this->WriteString("<SDKReference Include=\"", 2);
+			(*this->BuildFileStream) << cmVS10EscapeXML(*ri) << "\"/>\n";
+		}
+		this->WriteString("</ItemGroup>\n", 1);
+	}
+
   // This only applies to Windows 10 apps
   if (this->GlobalGenerator->TargetsWindowsStore() &&
       cmHasLiteralPrefix(this->GlobalGenerator->GetSystemVersion(), "10.0"))
