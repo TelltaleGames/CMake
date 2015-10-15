@@ -1606,8 +1606,8 @@ void cmVisualStudio10TargetGenerator::WriteSource(
     this->IsResxHeader(sf->GetFullPath()))
     {
       (*this->BuildFileStream ) << ">\n";
-      this->WriteString("<FileType>CppForm</FileType>\n", 3);
-      this->WriteString("</ClInclude>\n", 2);
+      //this->WriteString("<FileType>CppForm</FileType>\n", 3);
+      //this->WriteString("</ClInclude>\n", 2);
     }
   else if(sf->GetExtension() == "appxmanifest")
     {
