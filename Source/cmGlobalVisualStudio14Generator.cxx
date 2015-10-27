@@ -58,6 +58,10 @@ public:
       {
       return new cmGlobalVisualStudio14Generator(cm, genName, "ARM");
       }
+	if (strcmp(p, "XBOne") == 0)
+	{
+		return new cmGlobalVisualStudio14Generator(cm, genName, "Durango");
+	}
     return 0;
     }
 
@@ -75,6 +79,7 @@ public:
     names.push_back(vs14generatorName);
     names.push_back(vs14generatorName + std::string(" ARM"));
     names.push_back(vs14generatorName + std::string(" Win64"));
+	names.push_back(vs14generatorName + std::string(" XBOne"));
     }
 };
 
