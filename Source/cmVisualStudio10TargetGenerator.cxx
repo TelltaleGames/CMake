@@ -1443,10 +1443,6 @@ void cmVisualStudio10TargetGenerator::WriteExtraSource(cmSourceFile const* sf)
     {
     tool = "Image";
     }
-  else if(ext == "resw")
-    {
-    tool = "PRIResource";
-    }
   else if(ext == "xml")
     {
     tool = "XML";
@@ -3388,8 +3384,19 @@ void cmVisualStudio10TargetGenerator::WriteWinRTPackageCertificateKeyFile()
       this->WriteString("<AppxPackageArtifactsDir>", 2);
       (*this->BuildFileStream) << cmVS10EscapeXML(artifactDir) <<
         "\\</AppxPackageArtifactsDir>\n";
-      this->WriteString("<ProjectPriFullPath>"
-        "$(TargetDir)resources.pri</ProjectPriFullPath>\n", 2);
+
+	  const char* vsPRIPath = this->Target->GetProperty("VS_PRI_PATH");
+	  if( vsPRIPath )
+	  {
+		  this->WriteString("<ProjectPriFullPath>", 2);
+				(*this->BuildFileStream) << vsPRIPath
+				<< "/resources.pri</ProjectPriFullPath>\n";
+	  }
+	  else
+	  {
+		  this->WriteString("<ProjectPriFullPath>"
+			  "$(TargetDir)resources.pri</ProjectPriFullPath>\n", 2);
+	  }
 
       // If we are missing files and we don't have a certificate and
       // aren't targeting WP8.0, add a default certificate
