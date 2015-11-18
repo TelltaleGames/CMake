@@ -39,31 +39,35 @@ class cmGlobalVisualStudio14Generator::Factory
 public:
   virtual cmGlobalGenerator*
   CreateGlobalGenerator(const std::string& name, cmake* cm) const
-    {
-    std::string genName;
-    const char* p = cmVS14GenName(name, genName);
-    if(!p)
-      { return 0; }
-    if(!*p)
+  {
+      std::string genName;
+      const char* p = cmVS14GenName(name, genName);
+      if(!p)
+        { return 0; }
+      if(!*p)
       {
-      return new cmGlobalVisualStudio14Generator(cm, genName, "");
+        return new cmGlobalVisualStudio14Generator(cm, genName, "");
       }
-    if(*p++ != ' ')
-      { return 0; }
-    if(strcmp(p, "Win64") == 0)
+      if(*p++ != ' ')
+        { return 0; }
+      if(strcmp(p, "Win64") == 0)
       {
-      return new cmGlobalVisualStudio14Generator(cm, genName, "x64");
+        return new cmGlobalVisualStudio14Generator(cm, genName, "x64");
       }
-    if(strcmp(p, "ARM") == 0)
+      if(strcmp(p, "ARM") == 0)
       {
-      return new cmGlobalVisualStudio14Generator(cm, genName, "ARM");
+        return new cmGlobalVisualStudio14Generator(cm, genName, "ARM");
       }
-	if (strcmp(p, "XBOne") == 0)
-	{
-		return new cmGlobalVisualStudio14Generator(cm, genName, "Durango");
-	}
-    return 0;
-    }
+      if (strcmp(p, "XBOne") == 0)
+	  {
+	    return new cmGlobalVisualStudio14Generator(cm, genName, "Durango");
+	  }
+      if(strcmp(p, "PS4") == 0)
+      {
+        return new cmGlobalVisualStudio14Generator(cm, genName, "ORBIS");
+      }
+      return 0;
+  }
 
   virtual void GetDocumentation(cmDocumentationEntry& entry) const
     {
@@ -76,10 +80,11 @@ public:
 
   virtual void GetGenerators(std::vector<std::string>& names) const
     {
-    names.push_back(vs14generatorName);
-    names.push_back(vs14generatorName + std::string(" ARM"));
-    names.push_back(vs14generatorName + std::string(" Win64"));
-	names.push_back(vs14generatorName + std::string(" XBOne"));
+      names.push_back(vs14generatorName);
+      names.push_back(vs14generatorName + std::string(" ARM"));
+      names.push_back(vs14generatorName + std::string(" Win64"));
+  	  names.push_back(vs14generatorName + std::string(" XBOne"));
+      names.push_back(vs14generatorName + std::string(" PS4"));
     }
 };
 
