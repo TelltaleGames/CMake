@@ -704,8 +704,26 @@ void cmVisualStudio10TargetGenerator::WriteWinRTReferences()
     for(std::vector<std::string>::iterator ri = references.begin();
         ri != references.end(); ++ri)
       {
+      std::string rstr = *ri;
+      std::string hintPath;
+
+      // reference is a path.
+      if (rstr.find('\\') != std::string::npos || rstr.find('/') != std::string::npos)
+      {
+          std::replace(rstr.begin(), rstr.end(), '/', '\\');
+          hintPath = rstr;
+          // trim down to file name in path
+          rstr = rstr.substr( rstr.rfind('\\') + 1 );
+          // eliminate .winmd extension
+          if ((rstr.length() > 6) && !stricmp(rstr.c_str() + rstr.length() - 6, ".winmd"))
+          {
+              rstr = rstr.substr(0, rstr.length() - 6);
+          }
+      }
+
       this->WriteString("<Reference Include=\"", 2);
-      (*this->BuildFileStream) << cmVS10EscapeXML(*ri) << "\">\n";
+      (*this->BuildFileStream) << cmVS10EscapeXML(rstr) << "\">\n";
+      if ( !hintPath.empty() ) (*this->BuildFileStream) << "<HintPath>" << cmVS10EscapeXML(hintPath) << "</HintPath>\n";
       this->WriteString("<IsWinMDFile>true</IsWinMDFile>\n", 3);
       this->WriteString("</Reference>\n", 2);
       }
