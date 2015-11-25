@@ -510,12 +510,9 @@ void cmVisualStudio10TargetGenerator::Generate()
                       "BuildCustomizations\\masm.props\" />\n", 2);
     }
   this->WriteString("</ImportGroup>\n", 1);
-  this->WriteString("<ImportGroup Label=\"PropertySheets\">\n", 1);
-  this->WriteString("<Import Project=\"" VS10_USER_PROPS "\""
-                    " Condition=\"exists('" VS10_USER_PROPS "')\""
-                    " Label=\"LocalAppDataPlatform\" />\n", 2);
-  this->WritePlatformExtensions();
-  this->WriteString("</ImportGroup>\n", 1);
+
+  this->WritePropertySheets();
+
   this->WriteString("<PropertyGroup Label=\"UserMacros\" />\n", 1);
   this->WriteWinRTPackageCertificateKeyFile();
   this->WritePathAndIncrementalLinkOptions();
@@ -723,7 +720,11 @@ void cmVisualStudio10TargetGenerator::WriteWinRTReferences()
 
       this->WriteString("<Reference Include=\"", 2);
       (*this->BuildFileStream) << cmVS10EscapeXML(rstr) << "\">\n";
-      if ( !hintPath.empty() ) (*this->BuildFileStream) << "<HintPath>" << cmVS10EscapeXML(hintPath) << "</HintPath>\n";
+      if ( !hintPath.empty() ) 
+      {
+          this->WriteString("<HintPath>", 3 );
+          (*this->BuildFileStream) << cmVS10EscapeXML(hintPath) << "</HintPath>\n";
+      }
       this->WriteString("<IsWinMDFile>true</IsWinMDFile>\n", 3);
       this->WriteString("</Reference>\n", 2);
       }
@@ -3258,6 +3259,33 @@ void cmVisualStudio10TargetGenerator::WriteProjectReferences()
     this->WriteString("</ProjectReference>\n", 2);
     }
   this->WriteString("</ItemGroup>\n", 1);
+}
+
+void cmVisualStudio10TargetGenerator::WritePropertySheets()
+{
+    this->WriteString("<ImportGroup Label=\"PropertySheets\">\n", 1);
+    this->WriteString("<Import Project=\"" VS10_USER_PROPS "\""
+        " Condition=\"exists('" VS10_USER_PROPS "')\""
+        " Label=\"LocalAppDataPlatform\" />\n", 2);
+    this->WritePropertySheetImports();
+    this->WritePlatformExtensions();
+    this->WriteString("</ImportGroup>\n", 1);
+}
+
+void cmVisualStudio10TargetGenerator::WritePropertySheetImports()
+{
+    std::vector<std::string> propSheets;
+
+    if (const char* vsPropSheets = this->Target->GetProperty("VS_PROPERTY_SHEETS"))
+    {
+        cmSystemTools::ExpandListArgument(vsPropSheets, propSheets);
+    }
+
+    for (auto i = propSheets.begin(); i != propSheets.end(); i++)
+    {
+        this->WriteString("<Import Project=\"", 2);
+        *(this->BuildFileStream) << *i << "\"/>\n";
+    }
 }
 
 void cmVisualStudio10TargetGenerator::WritePlatformExtensions()

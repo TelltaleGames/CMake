@@ -81,7 +81,12 @@ private:
   void WriteMissingFilesWS80();
   void WriteMissingFilesWS81();
   void WriteMissingFilesWS10_0();
+
+  void WritePropertySheets();
+  // called from WritePropertySheets
   void WritePlatformExtensions();
+  // called from WritePropertySheets
+  void WritePropertySheetImports();
   void WriteSinglePlatformExtension(std::string const& extension,
                                     std::string const& version);
   void WriteSingleSDKReference(std::string const& extension,
