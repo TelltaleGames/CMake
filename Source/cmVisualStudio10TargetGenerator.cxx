@@ -527,13 +527,7 @@ void cmVisualStudio10TargetGenerator::Generate()
     "<Import Project=\"$(VCTargetsPath)\\Microsoft.Cpp.targets\""
     " />\n", 1);
   this->WriteTargetSpecificReferences();
-  this->WriteString("<ImportGroup Label=\"ExtensionTargets\">\n", 1);
-  if (this->GlobalGenerator->IsMasmEnabled())
-    {
-    this->WriteString("<Import Project=\"$(VCTargetsPath)\\"
-                      "BuildCustomizations\\masm.targets\" />\n", 2);
-    }
-  this->WriteString("</ImportGroup>\n", 1);
+  this->WriteExtensionTargets();
   this->WriteString("</Project>", 0);
   // The groups are stored in a separate file for VS 10
   this->WriteGroups();
@@ -674,6 +668,31 @@ void cmVisualStudio10TargetGenerator::WriteTargetSpecificReferences()
         "$(TargetPlatformVersion).targets\" />\n", 1);
       }
     }
+}
+
+void cmVisualStudio10TargetGenerator::WriteExtensionTargets()
+{
+    this->WriteString("<ImportGroup Label=\"ExtensionTargets\">\n", 1);
+
+    if (this->GlobalGenerator->IsMasmEnabled())
+    {
+        this->WriteString("<Import Project=\"$(VCTargetsPath)\\"
+            "BuildCustomizations\\masm.targets\" />\n", 2);
+    }
+
+    std::vector<std::string> extensions;
+    if (const char* vsExtensions = this->Target->GetProperty("VS_EXTENSION_TARGETS"))
+    {
+        cmSystemTools::ExpandListArgument(vsExtensions, extensions);
+    }
+
+    for (auto i = extensions.begin(); i != extensions.end(); i++)
+    {
+        this->WriteString("<Import Project=\"", 2);
+        *(this->BuildFileStream) << *i << "\"/>\n";
+    }
+
+    this->WriteString("</ImportGroup>\n", 1);
 }
 
 void cmVisualStudio10TargetGenerator::WriteWinRTReferences()

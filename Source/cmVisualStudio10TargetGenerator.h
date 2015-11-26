@@ -92,6 +92,7 @@ private:
                                std::string const& version);
   void WriteCommonMissingFiles(const std::string& manifestFile);
   void WriteTargetSpecificReferences();
+  void WriteExtensionTargets();
 
   bool ComputeClOptions();
   bool ComputeClOptions(std::string const& configName);
