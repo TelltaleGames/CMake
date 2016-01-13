@@ -783,9 +783,10 @@ void cmVisualStudio10TargetGenerator::WriteProjectConfigurationValues()
         break;
       case cmState::UTILITY:
       case cmState::GLOBAL_TARGET:
-        if(this->NsightTegra)
+        if(this->NsightTegra || this->Platform == "Durango")
           {
           // Tegra-Android platform does not understand "Utility".
+          // And XBOne screws it up
           configType += "StaticLibrary";
           }
         else
