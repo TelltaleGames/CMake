@@ -259,8 +259,8 @@ CMAKE_CXX_SOURCES="\
   cmPropertyMap \
   cmPropertyDefinition \
   cmPropertyDefinitionMap \
-  cmMakeDepend \
   cmMakefile \
+  cmExportBuildFileGenerator \
   cmExportFileGenerator \
   cmExportInstallFileGenerator \
   cmExportTryCompileFileGenerator \
@@ -701,13 +701,6 @@ cd "${cmake_bootstrap_dir}"
 if [ ! -d "cmsys" ]; then
   cmake_error 4 "Cannot create directory ${cmake_bootstrap_dir}/cmsys"
 fi
-
-for a in stl ios; do
-  [ -d "cmsys/${a}" ] || mkdir "cmsys/${a}"
-  if [ ! -d "cmsys/${a}" ]; then
-    cmake_error 5 "Cannot create directory ${cmake_bootstrap_dir}/cmsys/${a}"
-  fi
-done
 
 [ -d "cmIML" ] || mkdir "cmIML"
 if [ ! -d "cmIML" ]; then

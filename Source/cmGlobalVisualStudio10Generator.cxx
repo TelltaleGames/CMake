@@ -102,6 +102,8 @@ public:
     names.push_back(vs10generatorName + std::string(" PS4"));
     names.push_back(vs10generatorName + std::string(" PSVita")); 
     }
+
+  virtual bool SupportsToolset() const { return true; }
 };
 
 //----------------------------------------------------------------------------
@@ -360,7 +362,7 @@ void cmGlobalVisualStudio10Generator::Generate()
   this->cmGlobalVisualStudio8Generator::Generate();
   if(this->LongestSource.Length > 0)
     {
-    cmMakefile* mf = this->LongestSource.Target->GetMakefile();
+    cmLocalGenerator* lg = this->LongestSource.Target->GetLocalGenerator();
     std::ostringstream e;
     e <<
       "The binary and/or source directory paths may be too long to generate "
@@ -375,13 +377,13 @@ void cmGlobalVisualStudio10Generator::Generate()
       "  " << this->LongestSource.SourceFile->GetFullPath() << "\n"
       "This is because some Visual Studio tools would append the relative "
       "path to the end of the referencing directory path, as in:\n"
-      "  " << mf->GetCurrentBinaryDirectory() << "/"
+      "  " << lg->GetCurrentBinaryDirectory() << "/"
       << this->LongestSource.SourceRel << "\n"
       "and then incorrectly complain that the file does not exist because "
       "the path length is too long for some internal buffer or API.  "
       "To avoid this problem CMake must use a full path for this file "
       "which then triggers the VS 10 property dialog bug.";
-    mf->IssueMessage(cmake::WARNING, e.str().c_str());
+    lg->IssueMessage(cmake::WARNING, e.str().c_str());
     }
 }
 
@@ -620,9 +622,11 @@ cmGlobalVisualStudio10Generator
 
 //----------------------------------------------------------------------------
 void cmGlobalVisualStudio10Generator::PathTooLong(
-  cmTarget* target, cmSourceFile const* sf, std::string const& sfRel)
+        cmGeneratorTarget *target, cmSourceFile const* sf,
+        std::string const& sfRel)
 {
-  size_t len = (strlen(target->GetMakefile()->GetCurrentBinaryDirectory()) +
+  size_t len =
+      (strlen(target->GetLocalGenerator()->GetCurrentBinaryDirectory()) +
                 1 + sfRel.length());
   if(len > this->LongestSource.Length)
     {

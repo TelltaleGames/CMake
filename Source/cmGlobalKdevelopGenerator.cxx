@@ -68,14 +68,14 @@ void cmGlobalKdevelopGenerator::Generate()
     for (std::vector<cmLocalGenerator*>::const_iterator lg=lgs.begin();
          lg!=lgs.end(); lg++)
       {
-      cmMakefile* makefile=(*lg)->GetMakefile();
-      cmGeneratorTargetsType const& targets = makefile->GetGeneratorTargets();
-      for (cmGeneratorTargetsType::const_iterator ti = targets.begin();
-           ti != targets.end(); ti++)
+      std::vector<cmGeneratorTarget*> const& targets =
+          (*lg)->GetGeneratorTargets();
+      for (std::vector<cmGeneratorTarget*>::const_iterator ti =
+           targets.begin(); ti != targets.end(); ti++)
         {
-        if (ti->second->GetType()==cmTarget::EXECUTABLE)
+        if ((*ti)->GetType()==cmState::EXECUTABLE)
           {
-          executable = ti->second->GetLocation("");
+          executable = (*ti)->GetLocation("");
           break;
           }
         }
@@ -105,6 +105,9 @@ bool cmGlobalKdevelopGenerator
   std::set<std::string> files;
   std::string tmp;
 
+  std::vector<std::string> hdrExts =
+      this->GlobalGenerator->GetCMakeInstance()->GetHeaderExtensions();
+
   for (std::vector<cmLocalGenerator*>::const_iterator it=lgs.begin();
        it!=lgs.end(); it++)
     {
@@ -133,14 +136,13 @@ bool cmGlobalKdevelopGenerator
       }
 
     //get all sources
-    cmTargets& targets=makefile->GetTargets();
-    for (cmTargets::iterator ti = targets.begin();
+    std::vector<cmGeneratorTarget*> targets=(*it)->GetGeneratorTargets();
+    for (std::vector<cmGeneratorTarget*>::iterator ti = targets.begin();
          ti != targets.end(); ti++)
       {
       std::vector<cmSourceFile*> sources;
-      cmGeneratorTarget* gt =
-          this->GlobalGenerator->GetGeneratorTarget(&ti->second);
-      gt->GetSourceFiles(sources, ti->second.GetMakefile()
+      cmGeneratorTarget* gt = *ti;
+      gt->GetSourceFiles(sources, gt->Target->GetMakefile()
                                     ->GetSafeDefinition("CMAKE_BUILD_TYPE"));
       for (std::vector<cmSourceFile*>::const_iterator si=sources.begin();
            si!=sources.end(); si++)
@@ -161,8 +163,7 @@ bool cmGlobalKdevelopGenerator
 
           // check if there's a matching header around
           for(std::vector<std::string>::const_iterator
-                ext = makefile->GetHeaderExtensions().begin();
-              ext !=  makefile->GetHeaderExtensions().end(); ++ext)
+                ext = hdrExts.begin(); ext != hdrExts.end(); ++ext)
             {
             std::string hname=headerBasename;
             hname += ".";

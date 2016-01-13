@@ -149,35 +149,40 @@ void cmExtraCodeLiteGenerator
   // which may have an acompanying header, one for all other files
   std::string projectType;
 
+  std::vector<std::string> srcExts =
+      this->GlobalGenerator->GetCMakeInstance()->GetSourceExtensions();
+  std::vector<std::string> headerExts =
+      this->GlobalGenerator->GetCMakeInstance()->GetHeaderExtensions();
+
   std::map<std::string, cmSourceFile*> cFiles;
   std::set<std::string> otherFiles;
   for (std::vector<cmLocalGenerator*>::const_iterator lg=lgs.begin();
        lg!=lgs.end(); lg++)
     {
     cmMakefile* makefile=(*lg)->GetMakefile();
-    cmTargets& targets=makefile->GetTargets();
-    for (cmTargets::iterator ti = targets.begin();
+    std::vector<cmGeneratorTarget*> targets=(*lg)->GetGeneratorTargets();
+    for (std::vector<cmGeneratorTarget*>::iterator ti = targets.begin();
          ti != targets.end(); ti++)
       {
 
-      switch(ti->second.GetType())
+      switch((*ti)->GetType())
         {
-        case cmTarget::EXECUTABLE:
+        case cmState::EXECUTABLE:
           {
           projectType = "Executable";
           }
         break;
-        case cmTarget::STATIC_LIBRARY:
+        case cmState::STATIC_LIBRARY:
           {
           projectType = "Static Library";
           }
         break;
-        case cmTarget::SHARED_LIBRARY:
+        case cmState::SHARED_LIBRARY:
           {
           projectType = "Dynamic Library";
           }
         break;
-        case cmTarget::MODULE_LIBRARY:
+        case cmState::MODULE_LIBRARY:
           {
           projectType = "Dynamic Library";
           }
@@ -186,16 +191,15 @@ void cmExtraCodeLiteGenerator
           break;
         }
 
-      switch(ti->second.GetType())
+      switch((*ti)->GetType())
         {
-        case cmTarget::EXECUTABLE:
-        case cmTarget::STATIC_LIBRARY:
-        case cmTarget::SHARED_LIBRARY:
-        case cmTarget::MODULE_LIBRARY:
+        case cmState::EXECUTABLE:
+        case cmState::STATIC_LIBRARY:
+        case cmState::SHARED_LIBRARY:
+        case cmState::MODULE_LIBRARY:
           {
           std::vector<cmSourceFile*> sources;
-          cmGeneratorTarget* gt =
-              this->GlobalGenerator->GetGeneratorTarget(&ti->second);
+          cmGeneratorTarget* gt = *ti;
           gt->GetSourceFiles(sources,
                             makefile->GetSafeDefinition("CMAKE_BUILD_TYPE"));
           for (std::vector<cmSourceFile*>::const_iterator si=sources.begin();
@@ -208,9 +212,7 @@ void cmExtraCodeLiteGenerator
               {
               std::string srcext = (*si)->GetExtension();
               for(std::vector<std::string>::const_iterator
-                  ext = mf->GetSourceExtensions().begin();
-                  ext !=  mf->GetSourceExtensions().end();
-                  ++ext)
+                  ext = srcExts.begin(); ext != srcExts.end(); ++ext)
                 {
                 if (srcext == *ext)
                   {
@@ -254,8 +256,8 @@ void cmExtraCodeLiteGenerator
 
     // check if there's a matching header around
     for(std::vector<std::string>::const_iterator
-        ext = mf->GetHeaderExtensions().begin();
-        ext !=  mf->GetHeaderExtensions().end();
+        ext = headerExts.begin();
+        ext != headerExts.end();
         ++ext)
       {
       std::string hname=headerBasename;

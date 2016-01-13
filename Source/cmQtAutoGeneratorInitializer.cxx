@@ -64,7 +64,7 @@ static void SetupSourceFiles(cmGeneratorTarget const* target,
         std::string basename = cmsys::SystemTools::
                                       GetFilenameWithoutLastExtension(absFile);
 
-        std::string rcc_output_dir = target->Target->GetSupportDirectory();
+        std::string rcc_output_dir = target->GetSupportDirectory();
         cmSystemTools::MakeDirectory(rcc_output_dir.c_str());
         std::string rcc_output_file = rcc_output_dir;
         rcc_output_file += "/qrc_" + basename + ".cpp";
@@ -120,7 +120,7 @@ static void GetCompileDefinitionsAndDirectories(
   incs = cmJoin(includeDirs, ";");
 
   std::set<std::string> defines;
-  localGen->AddCompileDefinitions(defines, target->Target, config, "CXX");
+  localGen->AddCompileDefinitions(defines, target, config, "CXX");
 
   defs += cmJoin(defines, ";");
 }
@@ -132,6 +132,7 @@ static void SetupAutoMocTarget(cmGeneratorTarget const* target,
                           std::map<std::string, std::string> &configIncludes,
                           std::map<std::string, std::string> &configDefines)
 {
+  cmLocalGenerator* lg = target->GetLocalGenerator();
   cmMakefile* makefile = target->Target->GetMakefile();
 
   const char* tmp = target->GetProperty("AUTOMOC_MOC_OPTIONS");
@@ -188,7 +189,8 @@ static void SetupAutoMocTarget(cmGeneratorTarget const* target,
   const char *qtVersion = makefile->GetDefinition("_target_qt_version");
   if (strcmp(qtVersion, "5") == 0)
     {
-    cmTarget *qt5Moc = makefile->FindTargetToUse("Qt5::moc");
+    cmGeneratorTarget *qt5Moc =
+        lg->FindGeneratorTargetToUse("Qt5::moc");
     if (!qt5Moc)
       {
       cmSystemTools::Error("Qt5::moc target not found ",
@@ -200,7 +202,8 @@ static void SetupAutoMocTarget(cmGeneratorTarget const* target,
     }
   else if (strcmp(qtVersion, "4") == 0)
     {
-    cmTarget *qt4Moc = makefile->FindTargetToUse("Qt4::moc");
+    cmGeneratorTarget *qt4Moc =
+        lg->FindGeneratorTargetToUse("Qt4::moc");
     if (!qt4Moc)
       {
       cmSystemTools::Error("Qt4::moc target not found ",
@@ -230,6 +233,7 @@ static void SetupAutoUicTarget(cmGeneratorTarget const* target,
                           std::vector<std::string> const& skipUic,
                           std::map<std::string, std::string> &configUicOptions)
 {
+  cmLocalGenerator* lg = target->GetLocalGenerator();
   cmMakefile *makefile = target->Target->GetMakefile();
 
   std::set<std::string> skipped;
@@ -303,7 +307,8 @@ static void SetupAutoUicTarget(cmGeneratorTarget const* target,
   std::string targetName = target->GetName();
   if (strcmp(qtVersion, "5") == 0)
     {
-    cmTarget *qt5Uic = makefile->FindTargetToUse("Qt5::uic");
+    cmGeneratorTarget *qt5Uic =
+        lg->FindGeneratorTargetToUse("Qt5::uic");
     if (!qt5Uic)
       {
       // Project does not use Qt5Widgets, but has AUTOUIC ON anyway
@@ -316,7 +321,8 @@ static void SetupAutoUicTarget(cmGeneratorTarget const* target,
     }
   else if (strcmp(qtVersion, "4") == 0)
     {
-    cmTarget *qt4Uic = makefile->FindTargetToUse("Qt4::uic");
+    cmGeneratorTarget *qt4Uic =
+        lg->FindGeneratorTargetToUse("Qt4::uic");
     if (!qt4Uic)
       {
       cmSystemTools::Error("Qt4::uic target not found ",
@@ -335,6 +341,7 @@ static void SetupAutoUicTarget(cmGeneratorTarget const* target,
 
 static std::string GetRccExecutable(cmGeneratorTarget const* target)
 {
+  cmLocalGenerator* lg = target->GetLocalGenerator();
   cmMakefile *makefile = target->Target->GetMakefile();
   const char *qtVersion = makefile->GetDefinition("_target_qt_version");
   if (!qtVersion)
@@ -355,7 +362,8 @@ static std::string GetRccExecutable(cmGeneratorTarget const* target)
   std::string targetName = target->GetName();
   if (strcmp(qtVersion, "5") == 0)
     {
-    cmTarget *qt5Rcc = makefile->FindTargetToUse("Qt5::rcc");
+    cmGeneratorTarget *qt5Rcc =
+        lg->FindGeneratorTargetToUse("Qt5::rcc");
     if (!qt5Rcc)
       {
       cmSystemTools::Error("Qt5::rcc target not found ",
@@ -366,7 +374,8 @@ static std::string GetRccExecutable(cmGeneratorTarget const* target)
     }
   else if (strcmp(qtVersion, "4") == 0)
     {
-    cmTarget *qt4Rcc = makefile->FindTargetToUse("Qt4::rcc");
+    cmGeneratorTarget *qt4Rcc =
+        lg->FindGeneratorTargetToUse("Qt4::rcc");
     if (!qt4Rcc)
       {
       cmSystemTools::Error("Qt4::rcc target not found ",
@@ -481,11 +490,30 @@ static std::string ListQt5RccInputs(cmSourceFile* sf,
 {
   std::string rccCommand
       = GetRccExecutable(target);
+
+  bool hasDashDashList = false;
+  {
+  std::vector<std::string> command;
+  command.push_back(rccCommand);
+  command.push_back("--help");
+  std::string rccStdOut;
+  std::string rccStdErr;
+  int retVal = 0;
+  bool result = cmSystemTools::RunSingleCommand(
+    command, &rccStdOut, &rccStdErr,
+    &retVal, 0, cmSystemTools::OUTPUT_NONE);
+  if (result && retVal == 0 &&
+      rccStdOut.find("--list") != std::string::npos)
+    {
+    hasDashDashList = true;
+    }
+  }
+
   std::vector<std::string> qrcEntries;
 
   std::vector<std::string> command;
   command.push_back(rccCommand);
-  command.push_back("--list");
+  command.push_back(hasDashDashList? "--list" : "-list");
 
   std::string absFile = cmsys::SystemTools::GetRealPath(
                                               sf->GetFullPath());
@@ -833,7 +861,7 @@ void cmQtAutoGeneratorInitializer::InitializeAutogenTarget(
           std::string basename = cmsys::SystemTools::
                                   GetFilenameWithoutLastExtension(absFile);
 
-          std::string rcc_output_dir = target->Target->GetSupportDirectory();
+          std::string rcc_output_dir = target->GetSupportDirectory();
           cmSystemTools::MakeDirectory(rcc_output_dir.c_str());
           std::string rcc_output_file = rcc_output_dir;
           rcc_output_file += "/qrc_" + basename + ".cpp";
@@ -886,7 +914,7 @@ void cmQtAutoGeneratorInitializer::InitializeAutogenTarget(
                                 commandLines, false, autogenComment.c_str());
 
     cmGeneratorTarget* gt = new cmGeneratorTarget(autogenTarget, lg);
-    makefile->AddGeneratorTarget(autogenTarget, gt);
+    lg->AddGeneratorTarget(gt);
 
     // Set target folder
     const char* autogenFolder = makefile->GetState()

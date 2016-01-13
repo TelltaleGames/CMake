@@ -50,45 +50,15 @@ cmMakefile::cmMakefile(cmGlobalGenerator* globalGenerator,
 {
   this->IsSourceFileTryCompile = false;
 
-  // Initialize these first since AddDefaultDefinitions calls AddDefinition
   this->WarnUnused = this->GetCMakeInstance()->GetWarnUnused();
   this->CheckSystemVars = this->GetCMakeInstance()->GetCheckSystemVars();
 
   this->SuppressWatches = false;
 
-  // Setup the default include file regular expression (match everything).
-  this->SetProperty("INCLUDE_REGULAR_EXPRESSION", "^.*$");
   // Setup the default include complaint regular expression (match nothing).
   this->ComplainFileRegularExpression = "^$";
-  // Source and header file extensions that we can handle
-
-  // Set up a list of source and header extensions
-  // these are used to find files when the extension
-  // is not given
-  // The "c" extension MUST precede the "C" extension.
-  this->SourceFileExtensions.push_back( "c" );
-  this->SourceFileExtensions.push_back( "C" );
-
-  this->SourceFileExtensions.push_back( "c++" );
-  this->SourceFileExtensions.push_back( "cc" );
-  this->SourceFileExtensions.push_back( "cpp" );
-  this->SourceFileExtensions.push_back( "cxx" );
-  this->SourceFileExtensions.push_back( "m" );
-  this->SourceFileExtensions.push_back( "M" );
-  this->SourceFileExtensions.push_back( "mm" );
-
-  this->HeaderFileExtensions.push_back( "h" );
-  this->HeaderFileExtensions.push_back( "hh" );
-  this->HeaderFileExtensions.push_back( "h++" );
-  this->HeaderFileExtensions.push_back( "hm" );
-  this->HeaderFileExtensions.push_back( "hpp" );
-  this->HeaderFileExtensions.push_back( "hxx" );
-  this->HeaderFileExtensions.push_back( "in" );
-  this->HeaderFileExtensions.push_back( "txx" );
 
   this->DefineFlags = " ";
-
-  this->AddDefaultDefinitions();
 
   this->cmDefineRegex.compile("#cmakedefine[ \t]+([A-Za-z_0-9]*)");
   this->cmDefine01Regex.compile("#cmakedefine01[ \t]+([A-Za-z_0-9]*)");
@@ -119,36 +89,6 @@ cmMakefile::cmMakefile(cmGlobalGenerator* globalGenerator,
   this->AddSourceGroup("Resources", "\\.plist$");
   this->AddSourceGroup("Object Files", "\\.(lo|o|obj)$");
 #endif
-
-  this->AddDefinition("CMAKE_SOURCE_DIR",
-                      this->GetCMakeInstance()->GetHomeDirectory());
-  this->AddDefinition("CMAKE_BINARY_DIR",
-                      this->GetCMakeInstance()->GetHomeOutputDirectory());
-  {
-  const char* dir = this->StateSnapshot.GetDirectory().GetCurrentSource();
-  if (dir)
-    {
-    this->AddDefinition("CMAKE_CURRENT_SOURCE_DIR", dir);
-    }
-  else
-    {
-    this->AddDefinition("CMAKE_CURRENT_SOURCE_DIR",
-                        this->GetCMakeInstance()->GetHomeDirectory());
-    }
-  }
-  {
-  const char* dir = this->StateSnapshot.GetDirectory().GetCurrentBinary();
-  if (dir)
-    {
-    cmSystemTools::MakeDirectory(dir);
-    this->AddDefinition("CMAKE_CURRENT_BINARY_DIR", dir);
-    }
-  else
-    {
-    this->AddDefinition("CMAKE_CURRENT_BINARY_DIR",
-                        this->GetCMakeInstance()->GetHomeOutputDirectory());
-    }
-  }
 }
 
 cmMakefile::~cmMakefile()
@@ -165,7 +105,8 @@ cmMakefile::~cmMakefile()
 
 //----------------------------------------------------------------------------
 void cmMakefile::IssueMessage(cmake::MessageType t,
-                              std::string const& text) const
+                              std::string const& text,
+                              bool force) const
 {
   // Collect context information.
   if(!this->ExecutionStatusStack.empty())
@@ -174,7 +115,8 @@ void cmMakefile::IssueMessage(cmake::MessageType t,
       {
       this->ExecutionStatusStack.back()->SetNestedError(true);
       }
-    this->GetCMakeInstance()->IssueMessage(t, text, this->GetBacktrace());
+    this->GetCMakeInstance()->IssueMessage(t, text, this->GetBacktrace(),
+                                           force);
     }
   else
     {
@@ -189,7 +131,7 @@ void cmMakefile::IssueMessage(cmake::MessageType t,
       lfc.FilePath = converter.Convert(lfc.FilePath, cmOutputConverter::HOME);
       }
     lfc.Line = 0;
-    this->GetCMakeInstance()->IssueMessage(t, text, lfc);
+    this->GetCMakeInstance()->IssueMessage(t, text, lfc, force);
     }
 }
 
@@ -451,7 +393,7 @@ cmMakefile::IncludeScope::~IncludeScope()
       this->EnforceCMP0011();
       }
     }
-  this->Makefile->PopPolicyBarrier(this->ReportError);
+  this->Makefile->PopSnapshot(this->ReportError);
 
   this->Makefile->PopFunctionBlockerBarrier(this->ReportError);
 }
@@ -565,7 +507,7 @@ public:
 
   ~ListFileScope()
   {
-    this->Makefile->PopPolicyBarrier(this->ReportError);
+    this->Makefile->PopSnapshot(this->ReportError);
     this->Makefile->PopFunctionBlockerBarrier(this->ReportError);
   }
 
@@ -702,6 +644,29 @@ cmMakefile::GetEvaluationFiles() const
   return this->EvaluationFiles;
 }
 
+std::vector<cmExportBuildFileGenerator*>
+cmMakefile::GetExportBuildFileGenerators() const
+{
+  return this->ExportBuildFileGenerators;
+}
+
+void cmMakefile::RemoveExportBuildFileGeneratorCMP0024(
+    cmExportBuildFileGenerator* gen)
+{
+  std::vector<cmExportBuildFileGenerator*>::iterator it =
+      std::find(this->ExportBuildFileGenerators.begin(),
+                this->ExportBuildFileGenerators.end(), gen);
+  if(it != this->ExportBuildFileGenerators.end())
+    {
+    this->ExportBuildFileGenerators.erase(it);
+    }
+}
+
+void cmMakefile::AddExportBuildFileGenerator(cmExportBuildFileGenerator* gen)
+{
+  this->ExportBuildFileGenerators.push_back(gen);
+}
+
 namespace
 {
   struct file_not_persistent
@@ -768,15 +733,26 @@ void cmMakefile::ConfigureFinalPass()
       "with CMake 2.4 or later. For compatibility with older versions please "
       "use any CMake 2.8.x release or lower.");
     }
-  for (cmTargets::iterator l = this->Targets.begin();
-       l != this->Targets.end(); l++)
+#if defined(_WIN32) && !defined(__CYGWIN__)
+  // Do old-style link dependency analysis only for CM_USE_OLD_VS6.
+  if(this->GetGlobalGenerator()->IsForVS6())
     {
-    if (l->second.GetType() == cmTarget::INTERFACE_LIBRARY)
+    for (cmTargets::iterator l = this->Targets.begin();
+         l != this->Targets.end(); l++)
       {
-      continue;
+      if (l->second.GetType() == cmState::INTERFACE_LIBRARY)
+        {
+        continue;
+        }
+      // Erase any cached link information that might have been comptued
+      // on-demand during the configuration.  This ensures that build
+      // system generation uses up-to-date information even if other cache
+      // invalidation code in this source file is buggy.
+
+      l->second.AnalyzeLibDependenciesForVS6(*this);
       }
-    l->second.FinishConfigure();
     }
+#endif
 }
 
 //----------------------------------------------------------------------------
@@ -822,7 +798,7 @@ cmMakefile::AddCustomCommandToTarget(const std::string& target,
       return;
     }
 
-  if(ti->second.GetType() == cmTarget::OBJECT_LIBRARY)
+  if(ti->second.GetType() == cmState::OBJECT_LIBRARY)
     {
     std::ostringstream e;
     e << "Target \"" << target << "\" is an OBJECT library "
@@ -830,7 +806,7 @@ cmMakefile::AddCustomCommandToTarget(const std::string& target,
     this->IssueMessage(cmake::FATAL_ERROR, e.str());
     return;
     }
-  if(ti->second.GetType() == cmTarget::INTERFACE_LIBRARY)
+  if(ti->second.GetType() == cmState::INTERFACE_LIBRARY)
     {
     std::ostringstream e;
     e << "Target \"" << target << "\" is an INTERFACE library "
@@ -1196,7 +1172,7 @@ cmMakefile::AddUtilityCommand(const std::string& utilityName,
                               bool uses_terminal)
 {
   // Create a target instance for this utility.
-  cmTarget* target = this->AddNewTarget(cmTarget::UTILITY, utilityName);
+  cmTarget* target = this->AddNewTarget(cmState::UTILITY, utilityName);
   if (excludeFromAll)
     {
     target->SetProperty("EXCLUDE_FROM_ALL", "TRUE");
@@ -1412,7 +1388,7 @@ bool cmMakefile::ParseDefineFlag(std::string const& def, bool remove)
 }
 
 void cmMakefile::AddLinkLibrary(const std::string& lib,
-                                cmTarget::LinkLibraryType llt)
+                                cmTargetLinkLibraryType llt)
 {
   cmTarget::LibraryID tmp;
   tmp.first = lib;
@@ -1422,7 +1398,7 @@ void cmMakefile::AddLinkLibrary(const std::string& lib,
 
 void cmMakefile::AddLinkLibraryForTarget(const std::string& target,
                                          const std::string& lib,
-                                         cmTarget::LinkLibraryType llt)
+                                         cmTargetLinkLibraryType llt)
 {
   cmTargets::iterator i = this->Targets.find(target);
   if ( i != this->Targets.end())
@@ -1431,14 +1407,14 @@ void cmMakefile::AddLinkLibraryForTarget(const std::string& target,
     if(tgt)
       {
       // if it is not a static or shared library then you can not link to it
-      if(!((tgt->GetType() == cmTarget::STATIC_LIBRARY) ||
-           (tgt->GetType() == cmTarget::SHARED_LIBRARY) ||
-           (tgt->GetType() == cmTarget::INTERFACE_LIBRARY) ||
+      if(!((tgt->GetType() == cmState::STATIC_LIBRARY) ||
+           (tgt->GetType() == cmState::SHARED_LIBRARY) ||
+           (tgt->GetType() == cmState::INTERFACE_LIBRARY) ||
            tgt->IsExecutableWithExports()))
         {
         std::ostringstream e;
         e << "Target \"" << lib << "\" of type "
-          << cmTarget::GetTargetTypeName(tgt->GetType())
+          << cmState::GetTargetTypeName(tgt->GetType())
           << " may not be linked into another target.  "
           << "One may link only to STATIC or SHARED libraries, or "
           << "to executables with the ENABLE_EXPORTS property set.";
@@ -1483,7 +1459,7 @@ void cmMakefile::AddLinkDirectoryForTarget(const std::string& target,
 
 void cmMakefile::AddLinkLibrary(const std::string& lib)
 {
-  this->AddLinkLibrary(lib,cmTarget::GENERAL);
+  this->AddLinkLibrary(lib,GENERAL_LibraryType);
 }
 
 void cmMakefile::InitializeFromParent(cmMakefile* parent)
@@ -1560,7 +1536,7 @@ void cmMakefile::PopFunctionScope(bool reportError)
 {
   this->PopPolicy();
 
-  this->PopPolicyBarrier(reportError);
+  this->PopSnapshot(reportError);
 
   this->PopFunctionBlockerBarrier(reportError);
 
@@ -1591,7 +1567,7 @@ void cmMakefile::PushMacroScope(std::string const& fileName,
 void cmMakefile::PopMacroScope(bool reportError)
 {
   this->PopPolicy();
-  this->PopPolicyBarrier(reportError);
+  this->PopSnapshot(reportError);
 
   this->PopFunctionBlockerBarrier(reportError);
 }
@@ -1628,7 +1604,7 @@ public:
   ~BuildsystemFileScope()
   {
     this->Makefile->PopFunctionBlockerBarrier(this->ReportError);
-    this->Makefile->PopPolicyBarrier(this->ReportError);
+    this->Makefile->PopSnapshot(this->ReportError);
 #if defined(CMAKE_BUILD_WITH_CMAKE)
     this->GG->GetFileLockPool().PopFileScope();
 #endif
@@ -1682,6 +1658,7 @@ void cmMakefile::Configure()
   std::vector<cmMakefile*>::iterator sdi = subdirs.begin();
   for (; sdi != subdirs.end(); ++sdi)
     {
+    (*sdi)->StateSnapshot.InitializeFromParent_ForSubdirsCommand();
     this->ConfigureSubDirectory(*sdi);
     }
 
@@ -1761,6 +1738,8 @@ void cmMakefile::AddSubDirectory(const std::string& srcPath,
   newSnapshot.GetDirectory().SetCurrentSource(srcPath);
   newSnapshot.GetDirectory().SetCurrentBinary(binPath);
 
+  cmSystemTools::MakeDirectory(binPath.c_str());
+
   cmMakefile* subMf = new cmMakefile(this->GlobalGenerator, newSnapshot);
   this->GetGlobalGenerator()->AddMakefile(subMf);
 
@@ -1789,10 +1768,16 @@ const char* cmMakefile::GetCurrentBinaryDirectory() const
   return this->StateSnapshot.GetDirectory().GetCurrentBinary();
 }
 
-void cmMakefile::AddGeneratorTarget(cmTarget* t, cmGeneratorTarget* gt)
+std::vector<cmTarget*> cmMakefile::GetImportedTargets() const
 {
-  this->GeneratorTargets[t] = gt;
-  this->GetGlobalGenerator()->AddGeneratorTarget(t, gt);
+  std::vector<cmTarget*> tgts;
+  tgts.reserve(this->ImportedTargets.size());
+  for (TargetMap::const_iterator it = this->ImportedTargets.begin();
+       it != this->ImportedTargets.end(); ++it)
+    {
+    tgts.push_back(it->second);
+    }
+  return tgts;
 }
 
 //----------------------------------------------------------------------------
@@ -2033,9 +2018,9 @@ void cmMakefile::AddGlobalLinkInformation(const std::string& name,
   // for these targets do not add anything
   switch(target.GetType())
     {
-    case cmTarget::UTILITY:
-    case cmTarget::GLOBAL_TARGET:
-    case cmTarget::INTERFACE_LIBRARY:
+    case cmState::UTILITY:
+    case cmState::GLOBAL_TARGET:
+    case cmState::INTERFACE_LIBRARY:
       return;
     default:;
     }
@@ -2065,27 +2050,28 @@ void cmMakefile::AddGlobalLinkInformation(const std::string& name,
 }
 
 
-void cmMakefile::AddAlias(const std::string& lname, cmTarget *tgt)
+void cmMakefile::AddAlias(const std::string& lname,
+                          std::string const& tgtName)
 {
-  this->AliasTargets[lname] = tgt;
-  this->GetGlobalGenerator()->AddAlias(lname, tgt);
+  this->AliasTargets[lname] = tgtName;
+  this->GetGlobalGenerator()->AddAlias(lname, tgtName);
 }
 
 cmTarget* cmMakefile::AddLibrary(const std::string& lname,
-                            cmTarget::TargetType type,
+                            cmState::TargetType type,
                             const std::vector<std::string> &srcs,
                             bool excludeFromAll)
 {
   // wrong type ? default to STATIC
-  if (    (type != cmTarget::STATIC_LIBRARY)
-       && (type != cmTarget::SHARED_LIBRARY)
-       && (type != cmTarget::MODULE_LIBRARY)
-       && (type != cmTarget::OBJECT_LIBRARY)
-       && (type != cmTarget::INTERFACE_LIBRARY))
+  if (    (type != cmState::STATIC_LIBRARY)
+       && (type != cmState::SHARED_LIBRARY)
+       && (type != cmState::MODULE_LIBRARY)
+       && (type != cmState::OBJECT_LIBRARY)
+       && (type != cmState::INTERFACE_LIBRARY))
     {
     this->IssueMessage(cmake::INTERNAL_ERROR,
                        "cmMakefile::AddLibrary given invalid target type.");
-    type = cmTarget::STATIC_LIBRARY;
+    type = cmState::STATIC_LIBRARY;
     }
 
   cmTarget* target = this->AddNewTarget(type, lname);
@@ -2106,7 +2092,7 @@ cmTarget* cmMakefile::AddExecutable(const char *exeName,
                                     const std::vector<std::string> &srcs,
                                     bool excludeFromAll)
 {
-  cmTarget* target = this->AddNewTarget(cmTarget::EXECUTABLE, exeName);
+  cmTarget* target = this->AddNewTarget(cmState::EXECUTABLE, exeName);
   if(excludeFromAll)
     {
     target->SetProperty("EXCLUDE_FROM_ALL", "TRUE");
@@ -2118,14 +2104,13 @@ cmTarget* cmMakefile::AddExecutable(const char *exeName,
 
 //----------------------------------------------------------------------------
 cmTarget*
-cmMakefile::AddNewTarget(cmTarget::TargetType type, const std::string& name)
+cmMakefile::AddNewTarget(cmState::TargetType type, const std::string& name)
 {
   cmTargets::iterator it =
     this->Targets.insert(cmTargets::value_type(name, cmTarget())).first;
   cmTarget& target = it->second;
   target.SetType(type, name);
   target.SetMakefile(this);
-  this->GetGlobalGenerator()->AddTarget(&it->second);
   return &it->second;
 }
 
@@ -2189,7 +2174,7 @@ cmMakefile::GetSourceGroup(const std::vector<std::string>&name) const
 {
   cmSourceGroup* sg = 0;
 
-  // first look for source group starting with the same as the one we wants
+  // first look for source group starting with the same as the one we want
   for (std::vector<cmSourceGroup>::const_iterator
       sgIt = this->SourceGroups.begin();
       sgIt != this->SourceGroups.end(); ++sgIt)
@@ -2222,7 +2207,7 @@ void cmMakefile::AddSourceGroup(const std::string& name,
 {
   std::vector<std::string> nameVector;
   nameVector.push_back(name);
-  AddSourceGroup(nameVector, regex);
+  this->AddSourceGroup(nameVector, regex);
 }
 
 void cmMakefile::AddSourceGroup(const std::vector<std::string>& name,
@@ -2314,8 +2299,8 @@ void cmMakefile::ExpandVariablesCMP0019()
        l != this->Targets.end(); ++l)
     {
     cmTarget &t = l->second;
-    if (t.GetType() == cmTarget::INTERFACE_LIBRARY
-        || t.GetType() == cmTarget::GLOBAL_TARGET)
+    if (t.GetType() == cmState::INTERFACE_LIBRARY
+        || t.GetType() == cmState::GLOBAL_TARGET)
       {
       continue;
       }
@@ -2422,10 +2407,23 @@ bool cmMakefile::PlatformIsAppleIos() const
   sdkRoot = this->GetSafeDefinition("CMAKE_OSX_SYSROOT");
   sdkRoot = cmSystemTools::LowerCase(sdkRoot);
 
-  return sdkRoot.find("iphoneos") == 0 ||
-         sdkRoot.find("/iphoneos") != std::string::npos ||
-         sdkRoot.find("iphonesimulator") == 0 ||
-         sdkRoot.find("/iphonesimulator") != std::string::npos;
+  const std::string embedded[] =
+    {
+    "appletvos", "appletvsimulator",
+    "iphoneos", "iphonesimulator",
+    "watchos", "watchsimulator",
+    };
+
+  for(size_t i = 0; i < sizeof(embedded) / sizeof(embedded[0]); ++i)
+    {
+    if(sdkRoot.find(embedded[i]) == 0 ||
+       sdkRoot.find(std::string("/") + embedded[i]) != std::string::npos)
+      {
+      return true;
+      }
+    }
+
+   return false;
 }
 
 const char* cmMakefile::GetSONameFlag(const std::string& language) const
@@ -3150,58 +3148,6 @@ void cmMakefile::RemoveVariablesInString(std::string& source,
     {
     source.erase(var2.start(),var2.end() - var2.start());
     }
-}
-
-/**
- * Add the default definitions to the makefile.  These values must not
- * be dependent on anything that isn't known when this cmMakefile instance
- * is constructed.
- */
-void cmMakefile::AddDefaultDefinitions()
-{
-/* Up to CMake 2.4 here only WIN32, UNIX and APPLE were set.
-  With CMake must separate between target and host platform. In most cases
-  the tests for WIN32, UNIX and APPLE will be for the target system, so an
-  additional set of variables for the host system is required ->
-  CMAKE_HOST_WIN32, CMAKE_HOST_UNIX, CMAKE_HOST_APPLE.
-  WIN32, UNIX and APPLE are now set in the platform files in
-  Modules/Platforms/.
-  To keep cmake scripts (-P) and custom language and compiler modules
-  working, these variables are still also set here in this place, but they
-  will be reset in CMakeSystemSpecificInformation.cmake before the platform
-  files are executed. */
-#if defined(_WIN32)
-  this->AddDefinition("WIN32", "1");
-  this->AddDefinition("CMAKE_HOST_WIN32", "1");
-#else
-  this->AddDefinition("UNIX", "1");
-  this->AddDefinition("CMAKE_HOST_UNIX", "1");
-#endif
-#if defined(__CYGWIN__)
-  if(cmSystemTools::IsOn(cmSystemTools::GetEnv("CMAKE_LEGACY_CYGWIN_WIN32")))
-    {
-    this->AddDefinition("WIN32", "1");
-    this->AddDefinition("CMAKE_HOST_WIN32", "1");
-    }
-#endif
-#if defined(__APPLE__)
-  this->AddDefinition("APPLE", "1");
-  this->AddDefinition("CMAKE_HOST_APPLE", "1");
-#endif
-
-  char temp[1024];
-  sprintf(temp, "%d", cmVersion::GetMinorVersion());
-  this->AddDefinition("CMAKE_MINOR_VERSION", temp);
-  sprintf(temp, "%d", cmVersion::GetMajorVersion());
-  this->AddDefinition("CMAKE_MAJOR_VERSION", temp);
-  sprintf(temp, "%d", cmVersion::GetPatchVersion());
-  this->AddDefinition("CMAKE_PATCH_VERSION", temp);
-  sprintf(temp, "%d", cmVersion::GetTweakVersion());
-  this->AddDefinition("CMAKE_TWEAK_VERSION", temp);
-  this->AddDefinition("CMAKE_VERSION", cmVersion::GetCMakeVersion());
-
-  this->AddDefinition("CMAKE_FILES_DIRECTORY",
-                      cmake::GetCMakeFilesDirectory());
 }
 
 //----------------------------------------------------------------------------
@@ -4093,10 +4039,12 @@ cmTarget* cmMakefile::FindTarget(const std::string& name,
 {
   if (!excludeAliases)
     {
-    TargetMap::const_iterator i = this->AliasTargets.find(name);
+    std::map<std::string, std::string>::const_iterator i =
+        this->AliasTargets.find(name);
     if (i != this->AliasTargets.end())
       {
-      return i->second;
+      cmTargets::iterator ai = this->Targets.find(i->second);
+      return &ai->second;
       }
     }
   cmTargets::iterator i = this->Targets.find( name );
@@ -4222,9 +4170,7 @@ void cmMakefile::PopScope()
 
   this->CheckForUnusedVariables();
 
-  this->StateSnapshot =
-      this->GetState()->Pop(this->StateSnapshot);
-  assert(this->StateSnapshot.IsValid());
+  this->PopSnapshot();
 }
 
 void cmMakefile::RaiseScope(const std::string& var, const char *varDef)
@@ -4245,21 +4191,17 @@ void cmMakefile::RaiseScope(const std::string& var, const char *varDef)
 //----------------------------------------------------------------------------
 cmTarget*
 cmMakefile::AddImportedTarget(const std::string& name,
-                              cmTarget::TargetType type,
+                              cmState::TargetType type,
                               bool global)
 {
   // Create the target.
   cmsys::auto_ptr<cmTarget> target(new cmTarget);
   target->SetType(type, name);
-  target->MarkAsImported();
+  target->MarkAsImported(global);
   target->SetMakefile(this);
 
   // Add to the set of available imported targets.
   this->ImportedTargets[name] = target.get();
-  if(global)
-    {
-    this->GetGlobalGenerator()->AddTarget(target.get());
-    }
 
   // Transfer ownership to this cmMakefile object.
   this->ImportedTargetsOwned.push_back(target.get());
@@ -4295,17 +4237,6 @@ bool cmMakefile::IsAlias(const std::string& name) const
   if (this->AliasTargets.find(name) != this->AliasTargets.end())
     return true;
   return this->GetGlobalGenerator()->IsAlias(name);
-}
-
-//----------------------------------------------------------------------------
-cmGeneratorTarget*
-cmMakefile::FindGeneratorTargetToUse(const std::string& name) const
-{
-  if (cmTarget *t = this->FindTargetToUse(name))
-    {
-    return this->GetGlobalGenerator()->GetGeneratorTarget(t);
-    }
-  return 0;
 }
 
 //----------------------------------------------------------------------------
@@ -4357,7 +4288,7 @@ bool cmMakefile::EnforceUniqueName(std::string const& name, std::string& msg,
       // The conflict is with a non-imported target.
       // Allow this if the user has requested support.
       cmake* cm = this->GetCMakeInstance();
-      if(isCustom && existing->GetType() == cmTarget::UTILITY &&
+      if(isCustom && existing->GetType() == cmState::UTILITY &&
          this != existing->GetMakefile() &&
          cm->GetState()
            ->GetGlobalPropertyAsBool("ALLOW_DUPLICATE_CUSTOM_TARGETS"))
@@ -4373,22 +4304,22 @@ bool cmMakefile::EnforceUniqueName(std::string const& name, std::string& msg,
         << "The existing target is ";
       switch(existing->GetType())
         {
-        case cmTarget::EXECUTABLE:
+        case cmState::EXECUTABLE:
           e << "an executable ";
           break;
-        case cmTarget::STATIC_LIBRARY:
+        case cmState::STATIC_LIBRARY:
           e << "a static library ";
           break;
-        case cmTarget::SHARED_LIBRARY:
+        case cmState::SHARED_LIBRARY:
           e << "a shared library ";
           break;
-        case cmTarget::MODULE_LIBRARY:
+        case cmState::MODULE_LIBRARY:
           e << "a module library ";
           break;
-        case cmTarget::UTILITY:
+        case cmState::UTILITY:
           e << "a custom target ";
           break;
-        case cmTarget::INTERFACE_LIBRARY:
+        case cmState::INTERFACE_LIBRARY:
           e << "an interface library ";
           break;
         default: break;
@@ -4590,20 +4521,15 @@ bool cmMakefile::SetPolicy(cmPolicies::PolicyID id,
 }
 
 //----------------------------------------------------------------------------
-cmMakefile::PolicyPushPop::PolicyPushPop(cmMakefile* m, bool weak,
-                                         cmPolicies::PolicyMap const& pm):
-  Makefile(m), ReportError(true)
+cmMakefile::PolicyPushPop::PolicyPushPop(cmMakefile* m): Makefile(m)
 {
-  this->Makefile->StateSnapshot = this->Makefile->StateSnapshot.GetState()
-      ->CreatePolicyScopeSnapshot(this->Makefile->StateSnapshot);
-  this->Makefile->PushPolicy(weak, pm);
+  this->Makefile->PushPolicy();
 }
 
 //----------------------------------------------------------------------------
 cmMakefile::PolicyPushPop::~PolicyPushPop()
 {
   this->Makefile->PopPolicy();
-  this->Makefile->PopPolicyBarrier(this->ReportError);
 }
 
 //----------------------------------------------------------------------------
@@ -4623,8 +4549,11 @@ void cmMakefile::PopPolicy()
 }
 
 //----------------------------------------------------------------------------
-void cmMakefile::PopPolicyBarrier(bool reportError)
+void cmMakefile::PopSnapshot(bool reportError)
 {
+  // cmState::Snapshot manages nested policy scopes within it.
+  // Since the scope corresponding to the snapshot is closing,
+  // reject any still-open nested policy scopes with an error.
   while (!this->StateSnapshot.CanPopPolicyScope())
     {
     if(reportError)

@@ -63,6 +63,7 @@ public:
     std::vector<std::string> ClosureKeys() const;
     bool RaiseScope(std::string const& var, const char* varDef);
 
+    void Keep();
     void SetListFile(std::string const& listfile);
 
     std::string GetExecutionListFile() const;
@@ -90,11 +91,16 @@ public:
     void SetProjectName(std::string const& name);
     std::string GetProjectName() const;
 
+    void InitializeFromParent_ForSubdirsCommand();
+
     struct StrictWeakOrder
     {
       bool operator()(const cmState::Snapshot& lhs,
                       const cmState::Snapshot& rhs) const;
     };
+
+    void SetDirectoryDefinitions();
+    void SetDefaultDefinitions();
 
   private:
     friend bool operator==(const cmState::Snapshot& lhs,
@@ -175,6 +181,14 @@ public:
     Snapshot Snapshot_;
     friend class Snapshot;
   };
+
+  enum TargetType { EXECUTABLE, STATIC_LIBRARY,
+                    SHARED_LIBRARY, MODULE_LIBRARY,
+                    OBJECT_LIBRARY, UTILITY, GLOBAL_TARGET,
+                    INTERFACE_LIBRARY,
+                    UNKNOWN_LIBRARY};
+
+  static const char* GetTargetTypeName(cmState::TargetType targetType);
 
   Snapshot CreateBaseSnapshot();
   Snapshot

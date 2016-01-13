@@ -31,7 +31,20 @@ public:
   cmLocalGenerator* GetLocalGenerator() const;
 
   bool IsImported() const;
+  bool IsImportedGloballyVisible() const;
   const char *GetLocation(const std::string& config) const;
+
+  std::vector<cmCustomCommand> const &GetPreBuildCommands() const;
+  std::vector<cmCustomCommand> const &GetPreLinkCommands() const;
+  std::vector<cmCustomCommand> const &GetPostBuildCommands() const;
+
+#define DECLARE_TARGET_POLICY(POLICY) \
+  cmPolicies::PolicyStatus GetPolicyStatus ## POLICY () const \
+    { return this->PolicyMap.Get(cmPolicies::POLICY); }
+
+  CM_FOR_EACH_TARGET_POLICY(DECLARE_TARGET_POLICY)
+
+#undef DECLARE_TARGET_POLICY
 
   /** Get the location of the target in the build tree with a placeholder
       referencing the configuration in the native build system.  This
@@ -41,8 +54,11 @@ public:
   cmComputeLinkInformation*
     GetLinkInformation(const std::string& config) const;
 
-  int GetType() const;
+  cmState::TargetType GetType() const;
   std::string GetName() const;
+  std::string GetExportName() const;
+
+  std::vector<std::string> GetPropertyKeys() const;
   const char *GetProperty(const std::string& prop) const;
   bool GetPropertyAsBool(const std::string& prop) const;
   void GetSourceFiles(std::vector<cmSourceFile*>& files,
@@ -81,6 +97,8 @@ public:
                               const std::string& config) const;
   void GetExpectedXamlSources(std::set<std::string>&,
                               const std::string& config) const;
+
+  std::set<cmLinkItem>const& GetUtilityItems() const;
 
   void ComputeObjectMapping();
 
@@ -149,6 +167,10 @@ public:
   std::string GetFrameworkDirectory(const std::string& config,
                                     bool rootDir) const;
 
+  /** Return the framework version string.  Undefined if
+      IsFrameworkOnApple returns false.  */
+  std::string GetFrameworkVersion() const;
+
   /** @return the Mac CFBundle directory without the base */
   std::string GetCFBundleDirectory(const std::string& config,
                                    bool contentOnly) const;
@@ -161,6 +183,20 @@ public:
   /** Return the install name directory for the target in the
     * install tree.  For example: "\@rpath/" or "\@loader_path/". */
   std::string GetInstallNameDirForInstallTree() const;
+
+  cmListFileBacktrace GetBacktrace() const;
+
+  const std::vector<std::string>& GetLinkDirectories() const;
+
+  std::set<std::string>const& GetUtilities() const;
+  cmListFileBacktrace const* GetUtilityBacktrace(const std::string& u) const;
+
+  bool LinkLanguagePropagatesToDependents() const
+  { return this->GetType() == cmState::STATIC_LIBRARY; }
+
+  /** Get the macro to define when building sources in this target.
+      If no macro should be defined null is returned.  */
+  const char* GetExportMacro() const;
 
   /** Get the soname of the target.  Allowed only for a shared library.  */
   std::string GetSOName(const std::string& config) const;
@@ -184,7 +220,13 @@ public:
   cmLocalGenerator* LocalGenerator;
   cmGlobalGenerator const* GlobalGenerator;
 
-  std::string GetModuleDefinitionFile(const std::string& config) const;
+  cmSourceFile const* GetModuleDefinitionFile(const std::string& config) const;
+
+  /** Return whether or not the target is for a DLL platform.  */
+  bool IsDLLPlatform() const;
+
+  /** @return whether this target have a well defined output file name. */
+  bool HaveWellDefinedOutputFiles() const;
 
   /** Link information from the transitive closure of the link
       implementation and the interfaces of its dependencies.  */
@@ -214,6 +256,8 @@ public:
                                           cmOptionalLinkImplementation& impl,
                                           const cmGeneratorTarget* head) const;
 
+  cmGeneratorTarget* FindTargetToLink(std::string const& name) const;
+
   // Compute the set of languages compiled by the target.  This is
   // computed every time it is called because the languages can change
   // when source file properties are changed and we do not have enough
@@ -221,6 +265,12 @@ public:
   // until we have per-target object file properties.
   void GetLanguages(std::set<std::string>& languages,
                     std::string const& config) const;
+
+  void
+  GetObjectLibrariesCMP0026(std::vector<cmGeneratorTarget*>& objlibs) const;
+
+  std::string GetFullNameImported(const std::string& config,
+                                  bool implib) const;
 
   bool GetConfigCommonSourceFiles(std::vector<cmSourceFile*>& files) const;
 
@@ -386,6 +436,38 @@ public:
   ///! Return the preferred linker language for this target
   std::string GetLinkerLanguage(const std::string& config = "") const;
 
+  /** Does this target have a GNU implib to convert to MS format?  */
+  bool HasImplibGNUtoMS() const;
+
+  /** Convert the given GNU import library name (.dll.a) to a name with a new
+      extension (.lib or ${CMAKE_IMPORT_LIBRARY_SUFFIX}).  */
+  bool GetImplibGNUtoMS(std::string const& gnuName, std::string& out,
+                        const char* newExt = 0) const;
+
+  bool IsExecutableWithExports() const;
+
+  /** Return whether or not the target has a DLL import library.  */
+  bool HasImportLibrary() const;
+
+  /** Get a build-tree directory in which to place target support files.  */
+  std::string GetSupportDirectory() const;
+
+  /** Return whether this target may be used to link another target.  */
+  bool IsLinkable() const;
+
+  /** Return whether this target is a shared library Framework on
+      Apple.  */
+  bool IsFrameworkOnApple() const;
+
+  /** Return whether this target is an executable Bundle on Apple.  */
+  bool IsAppBundleOnApple() const;
+
+  /** Return whether this target is a XCTest on Apple.  */
+  bool IsXCTestOnApple() const;
+
+  /** Return whether this target is a CFBundle (plugin) on Apple.  */
+  bool IsCFBundleOnApple() const;
+
   struct SourceFileFlags
   GetTargetSourceFileFlags(const cmSourceFile* sf) const;
 
@@ -419,6 +501,19 @@ public:
       no soname at all.  */
   bool IsImportedSharedLibWithoutSOName(const std::string& config) const;
 
+  const char* ImportedGetLocation(const std::string& config) const;
+
+  /** Get the target major and minor version numbers interpreted from
+      the VERSION property.  Version 0 is returned if the property is
+      not set or cannot be parsed.  */
+  void GetTargetVersion(int& major, int& minor) const;
+
+  /** Get the target major, minor, and patch version numbers
+      interpreted from the VERSION or SOVERSION property.  Version 0
+      is returned if the property is not set or cannot be parsed.  */
+  void
+  GetTargetVersion(bool soversion, int& major, int& minor, int& patch) const;
+
 private:
   friend class cmTargetTraceDependencies;
   struct SourceEntry { std::vector<cmSourceFile*> Depends; };
@@ -427,6 +522,8 @@ private:
   mutable std::map<cmSourceFile const*, std::string> Objects;
   std::set<cmSourceFile const*> ExplicitObjectName;
   mutable std::map<std::string, std::vector<std::string> > SystemIncludesCache;
+
+  mutable std::string ExportMacro;
 
   void ConstructSourceFileFlags() const;
   mutable bool SourceFileFlagsConstructed;
@@ -445,6 +542,13 @@ private:
 
   // Returns ARCHIVE, LIBRARY, or RUNTIME based on platform and type.
   const char* GetOutputTargetType(bool implib) const;
+
+  void ComputeVersionedName(std::string& vName,
+                            std::string const& prefix,
+                            std::string const& base,
+                            std::string const& suffix,
+                            std::string const& name,
+                            const char* version) const;
 
   struct CompatibleInterfacesBase
   {
@@ -473,7 +577,7 @@ private:
   cmGeneratorTarget(cmGeneratorTarget const&);
   void operator=(cmGeneratorTarget const&);
 
-  struct LinkImplClosure: public std::vector<cmTarget const*>
+  struct LinkImplClosure: public std::vector<cmGeneratorTarget const*>
   {
     LinkImplClosure(): Done(false) {}
     bool Done;
@@ -489,6 +593,31 @@ private:
   GetHeadToLinkInterfaceMap(std::string const& config) const;
   cmHeadToLinkInterfaceMap& GetHeadToLinkInterfaceUsageRequirementsMap(
       std::string const& config) const;
+
+  // Cache import information from properties for each configuration.
+  struct ImportInfo
+  {
+    ImportInfo(): NoSOName(false), Multiplicity(0) {}
+    bool NoSOName;
+    int Multiplicity;
+    std::string Location;
+    std::string SOName;
+    std::string ImportLibrary;
+    std::string Languages;
+    std::string Libraries;
+    std::string LibrariesProp;
+    std::string SharedDeps;
+  };
+
+  typedef std::map<std::string, ImportInfo> ImportInfoMapType;
+  mutable ImportInfoMapType ImportInfoMap;
+  void ComputeImportInfo(std::string const& desired_config,
+                         ImportInfo& info) const;
+  ImportInfo const* GetImportInfo(const std::string& config) const;
+
+  /** Strip off leading and trailing whitespace from an item named in
+      the link dependencies of this target.  */
+  std::string CheckCMP0004(std::string const& item) const;
 
   cmLinkInterface const*
     GetImportLinkInterface(const std::string& config,
@@ -519,7 +648,7 @@ private:
                       const std::string& config) const;
 
   struct HeadToLinkImplementationMap:
-    public std::map<cmTarget const*, cmOptionalLinkImplementation> {};
+    public std::map<cmGeneratorTarget const*, cmOptionalLinkImplementation> {};
   typedef std::map<std::string,
                    HeadToLinkImplementationMap> LinkImplMapType;
   mutable LinkImplMapType LinkImplMap;
@@ -537,6 +666,8 @@ private:
   typedef std::pair<std::string, bool> OutputNameKey;
   typedef std::map<OutputNameKey, std::string> OutputNameMapType;
   mutable OutputNameMapType OutputNameMap;
+  mutable std::set<cmLinkItem> UtilityItems;
+  cmPolicies::PolicyMap PolicyMap;
   mutable bool PolicyWarnedCMP0022;
   mutable bool DebugIncludesDone;
   mutable bool DebugCompileOptionsDone;
@@ -544,13 +675,15 @@ private:
   mutable bool DebugCompileDefinitionsDone;
   mutable bool DebugSourcesDone;
   mutable bool LinkImplementationLanguageIsContextDependent;
+  mutable bool UtilityItemsDone;
+  bool DLLPlatform;
 
   bool ComputePDBOutputDir(const std::string& kind, const std::string& config,
                            std::string& out) const;
 
 public:
-  std::vector<cmTarget const*> const&
-    GetLinkImplementationClosure(const std::string& config) const;
+  const std::vector<const cmGeneratorTarget*>&
+  GetLinkImplementationClosure(const std::string& config) const;
 
   mutable std::map<std::string, std::string> MaxLanguageStandards;
   std::map<std::string, std::string> const&
@@ -558,14 +691,11 @@ public:
   {
     return this->MaxLanguageStandards;
   }
-};
 
-struct cmStrictTargetComparison {
-  bool operator()(cmTarget const* t1, cmTarget const* t2) const;
+  struct StrictTargetComparison {
+    bool operator()(cmGeneratorTarget const* t1,
+                    cmGeneratorTarget const* t2) const;
+  };
 };
-
-typedef std::map<cmTarget const*,
-                 cmGeneratorTarget*,
-                 cmStrictTargetComparison> cmGeneratorTargetsType;
 
 #endif

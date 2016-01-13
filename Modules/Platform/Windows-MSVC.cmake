@@ -353,6 +353,7 @@ macro(__windows_compiler_msvc lang)
   endif()
 
   set(CMAKE_${lang}_LINKER_SUPPORTS_PDB ON)
+  set(CMAKE_NINJA_DEPTYPE_${lang} msvc)
 
   if(NOT CMAKE_RC_COMPILER_INIT)
     set(CMAKE_RC_COMPILER_INIT rc)
@@ -362,4 +363,5 @@ macro(__windows_compiler_msvc lang)
   endif()
 
   enable_language(RC)
+  set(CMAKE_NINJA_CMCLDEPS_RC 1)
 endmacro()

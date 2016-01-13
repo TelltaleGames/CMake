@@ -127,8 +127,6 @@ cmake::cmake()
   this->WarnUnused = false;
   this->WarnUnusedCli = true;
   this->CheckSystemVars = false;
-  this->SuppressDevWarnings = false;
-  this->DoSuppressDevWarnings = false;
   this->DebugOutput = false;
   this->DebugTryCompile = false;
   this->ClearBuildSystem = false;
@@ -165,6 +163,30 @@ cmake::cmake()
 
   // Make sure we can capture the build tool output.
   cmSystemTools::EnableVSConsoleOutput();
+
+  // Set up a list of source and header extensions
+  // these are used to find files when the extension
+  // is not given
+  // The "c" extension MUST precede the "C" extension.
+  this->SourceFileExtensions.push_back( "c" );
+  this->SourceFileExtensions.push_back( "C" );
+
+  this->SourceFileExtensions.push_back( "c++" );
+  this->SourceFileExtensions.push_back( "cc" );
+  this->SourceFileExtensions.push_back( "cpp" );
+  this->SourceFileExtensions.push_back( "cxx" );
+  this->SourceFileExtensions.push_back( "m" );
+  this->SourceFileExtensions.push_back( "M" );
+  this->SourceFileExtensions.push_back( "mm" );
+
+  this->HeaderFileExtensions.push_back( "h" );
+  this->HeaderFileExtensions.push_back( "hh" );
+  this->HeaderFileExtensions.push_back( "h++" );
+  this->HeaderFileExtensions.push_back( "hm" );
+  this->HeaderFileExtensions.push_back( "hpp" );
+  this->HeaderFileExtensions.push_back( "hxx" );
+  this->HeaderFileExtensions.push_back( "in" );
+  this->HeaderFileExtensions.push_back( "txx" );
 }
 
 cmake::~cmake()
@@ -186,6 +208,7 @@ void cmake::CleanupCommandsAndMacros()
 {
   this->CurrentSnapshot = this->State->Reset();
   this->State->RemoveUserDefinedCommands();
+  this->CurrentSnapshot.SetDefaultDefinitions();
 }
 
 // Parse the args
@@ -249,15 +272,51 @@ bool cmake::SetCacheArgs(const std::vector<std::string>& args)
         return false;
         }
       }
-    else if(arg.find("-Wno-dev",0) == 0)
+    else if(cmHasLiteralPrefix(arg, "-W"))
       {
-      this->SuppressDevWarnings = true;
-      this->DoSuppressDevWarnings = true;
-      }
-    else if(arg.find("-Wdev",0) == 0)
-      {
-      this->SuppressDevWarnings = false;
-      this->DoSuppressDevWarnings = true;
+      std::string entry = arg.substr(2);
+      if (entry.empty())
+        {
+        ++i;
+        if (i < args.size())
+          {
+          entry = args[i];
+          }
+        else
+          {
+          cmSystemTools::Error("-W must be followed with [no-]<name>.");
+          return false;
+          }
+        }
+
+      std::string name;
+      bool foundNo = false;
+      unsigned int nameStartPosition = 0;
+
+      if (entry.find("no-", nameStartPosition) == 0)
+        {
+        foundNo = true;
+        nameStartPosition += 3;
+        }
+
+      name = entry.substr(nameStartPosition);
+      if (name.empty())
+        {
+        cmSystemTools::Error("No warning name provided.");
+        return false;
+        }
+
+      if (!foundNo)
+        {
+        // -W<name>
+        this->DiagLevels[name] = std::max(this->DiagLevels[name],
+                                          DIAG_WARN);
+        }
+      else
+        {
+        // -Wno<name>
+        this->DiagLevels[name] = DIAG_IGNORE;
+        }
       }
     else if(arg.find("-U",0) == 0)
       {
@@ -378,6 +437,7 @@ void cmake::ReadListFile(const std::vector<std::string>& args,
       (cmSystemTools::GetCurrentWorkingDirectory());
     snapshot.GetDirectory().SetCurrentSource
       (cmSystemTools::GetCurrentWorkingDirectory());
+    snapshot.SetDefaultDefinitions();
     cmsys::auto_ptr<cmMakefile> mf(new cmMakefile(gg, snapshot));
     if (this->GetWorkingMode() != NORMAL_MODE)
       {
@@ -420,8 +480,9 @@ bool cmake::FindPackage(const std::vector<std::string>& args)
   snapshot.GetDirectory().SetCurrentSource
     (cmSystemTools::GetCurrentWorkingDirectory());
   // read in the list file to fill the cache
-  cmsys::auto_ptr<cmMakefile> mf(new cmMakefile(gg, snapshot));
-  cmsys::auto_ptr<cmLocalGenerator> lg(gg->CreateLocalGenerator(mf.get()));
+  snapshot.SetDefaultDefinitions();
+  cmMakefile* mf = new cmMakefile(gg, snapshot);
+  gg->AddMakefile(mf);
 
   mf->SetArgcArgv(args);
 
@@ -454,6 +515,8 @@ bool cmake::FindPackage(const std::vector<std::string>& args)
     std::vector<std::string> includeDirs;
     cmSystemTools::ExpandListArgument(includes, includeDirs);
 
+    gg->CreateGenerationObjects();
+    cmLocalGenerator* lg = gg->LocalGenerators[0];
     std::string includeFlags = lg->GetIncludeFlags(includeDirs, 0, language);
 
     std::string definitions = mf->GetSafeDefinition("PACKAGE_DEFINITIONS");
@@ -474,7 +537,7 @@ bool cmake::FindPackage(const std::vector<std::string>& args)
             ++libIt)
       {
       mf->AddLinkLibraryForTarget(targetName, *libIt,
-                                  cmTarget::GENERAL);
+                                  GENERAL_LibraryType);
       }
 
 
@@ -483,8 +546,9 @@ bool cmake::FindPackage(const std::vector<std::string>& args)
     std::string linkPath;
     std::string flags;
     std::string linkFlags;
-    gg->CreateGeneratorTargets(cmGlobalGenerator::AllTargets, lg.get());
-    cmGeneratorTarget *gtgt = gg->GetGeneratorTarget(tgt);
+    gg->CreateGenerationObjects();
+    cmGeneratorTarget *gtgt = gg->FindGeneratorTarget(tgt->GetName());
+    cmLocalGenerator* lg = gtgt->GetLocalGenerator();
     lg->GetTargetFlags(linkLibs, frameworkPath, linkPath, flags, linkFlags,
                        gtgt, false);
     linkLibs = frameworkPath + linkPath + linkLibs;
@@ -588,11 +652,7 @@ void cmake::SetArgs(const std::vector<std::string>& args,
       // skip for now
       i++;
       }
-    else if(arg.find("-Wno-dev",0) == 0)
-      {
-      // skip for now
-      }
-    else if(arg.find("-Wdev",0) == 0)
+    else if(arg.find("-W",0) == 0)
       {
       // skip for now
       }
@@ -927,18 +987,32 @@ void cmake::AddDefaultExtraGenerators()
 
 
 //----------------------------------------------------------------------------
-void cmake::GetRegisteredGenerators(std::vector<std::string>& names)
+void cmake::GetRegisteredGenerators(std::vector<GeneratorInfo>& generators)
 {
-  for(RegisteredGeneratorsVector::const_iterator i = this->Generators.begin();
-      i != this->Generators.end(); ++i)
+  for (RegisteredGeneratorsVector::const_iterator
+       i = this->Generators.begin(), e = this->Generators.end();
+       i != e; ++i)
     {
+    std::vector<std::string> names;
     (*i)->GetGenerators(names);
+
+    for (size_t j = 0; j < names.size(); ++j)
+      {
+      GeneratorInfo info;
+      info.supportsToolset = (*i)->SupportsToolset();
+      info.name = names[j];
+      generators.push_back(info);
+      }
     }
-  for(RegisteredExtraGeneratorsMap::const_iterator
-      i = this->ExtraGenerators.begin();
-      i != this->ExtraGenerators.end(); ++i)
+
+  for (RegisteredExtraGeneratorsMap::const_iterator
+       i = this->ExtraGenerators.begin(), e = this->ExtraGenerators.end();
+       i != e; ++i)
     {
-    names.push_back(i->first);
+    GeneratorInfo info;
+    info.name = i->first;
+    info.supportsToolset = false;
+    generators.push_back(info);
     }
 }
 
@@ -980,6 +1054,10 @@ cmGlobalGenerator* cmake::CreateGlobalGenerator(const std::string& gname)
 void cmake::SetHomeDirectory(const std::string& dir)
 {
   this->State->SetSourceDirectory(dir);
+  if (this->CurrentSnapshot.IsValid())
+    {
+    this->CurrentSnapshot.SetDefinition("CMAKE_SOURCE_DIR", dir);
+    }
 }
 
 const char* cmake::GetHomeDirectory() const
@@ -990,6 +1068,10 @@ const char* cmake::GetHomeDirectory() const
 void cmake::SetHomeOutputDirectory(const std::string& dir)
 {
   this->State->SetBinaryDirectory(dir);
+  if (this->CurrentSnapshot.IsValid())
+    {
+    this->CurrentSnapshot.SetDefinition("CMAKE_BINARY_DIR", dir);
+    }
 }
 
 const char* cmake::GetHomeOutputDirectory() const
@@ -1179,25 +1261,74 @@ int cmake::HandleDeleteCacheVariables(const std::string& var)
 
 int cmake::Configure()
 {
-  if(this->DoSuppressDevWarnings)
+  DiagLevel diagLevel;
+
+  if (this->DiagLevels.count("deprecated") == 1)
     {
-    if(this->SuppressDevWarnings)
+
+    diagLevel = this->DiagLevels["deprecated"];
+    if (diagLevel == DIAG_IGNORE)
       {
-      this->
-        AddCacheEntry("CMAKE_SUPPRESS_DEVELOPER_WARNINGS", "TRUE",
-                      "Suppress Warnings that are meant for"
-                      " the author of the CMakeLists.txt files.",
-                      cmState::INTERNAL);
+      this->AddCacheEntry("CMAKE_WARN_DEPRECATED", "FALSE",
+                          "Whether to issue warnings for deprecated "
+                          "functionality.",
+                          cmState::INTERNAL);
       }
-    else
+    else if (diagLevel == DIAG_WARN)
       {
-      this->
-        AddCacheEntry("CMAKE_SUPPRESS_DEVELOPER_WARNINGS", "FALSE",
-                      "Suppress Warnings that are meant for"
-                      " the author of the CMakeLists.txt files.",
-                      cmState::INTERNAL);
+      this->AddCacheEntry("CMAKE_WARN_DEPRECATED", "TRUE",
+                          "Whether to issue warnings for deprecated "
+                          "functionality.",
+                          cmState::INTERNAL);
       }
     }
+
+  if (this->DiagLevels.count("dev") == 1)
+    {
+    bool setDeprecatedVariables = false;
+
+    const char* cachedWarnDeprecated =
+           this->State->GetCacheEntryValue("CMAKE_WARN_DEPRECATED");
+
+    // don't overwrite deprecated warning setting from a previous invocation
+    if (!cachedWarnDeprecated)
+      {
+      setDeprecatedVariables = true;
+      }
+
+    diagLevel = this->DiagLevels["dev"];
+    if (diagLevel == DIAG_IGNORE)
+      {
+      this->AddCacheEntry("CMAKE_SUPPRESS_DEVELOPER_WARNINGS", "TRUE",
+                          "Suppress Warnings that are meant for"
+                          " the author of the CMakeLists.txt files.",
+                          cmState::INTERNAL);
+
+      if (setDeprecatedVariables)
+        {
+        this->AddCacheEntry("CMAKE_WARN_DEPRECATED", "FALSE",
+                            "Whether to issue warnings for deprecated "
+                            "functionality.",
+                            cmState::INTERNAL);
+        }
+      }
+    else if (diagLevel == DIAG_WARN)
+      {
+      this->AddCacheEntry("CMAKE_SUPPRESS_DEVELOPER_WARNINGS", "FALSE",
+                          "Suppress Warnings that are meant for"
+                          " the author of the CMakeLists.txt files.",
+                          cmState::INTERNAL);
+
+      if (setDeprecatedVariables)
+        {
+        this->AddCacheEntry("CMAKE_WARN_DEPRECATED", "TRUE",
+                            "Whether to issue warnings for deprecated "
+                            "functionality.",
+                            cmState::INTERNAL);
+        }
+      }
+    }
+
   int ret = this->ActualConfigure();
   const char* delCacheVars = this->State
                     ->GetGlobalProperty("__CMAKE_DELETE_CACHE_CHANGE_VARS_");
@@ -1528,6 +1659,7 @@ int cmake::Run(const std::vector<std::string>& args, bool noconfigure)
     {
     this->AddCMakePaths();
     }
+
   // Add any cache args
   if ( !this->SetCacheArgs(args) )
     {
@@ -1920,6 +2052,7 @@ int cmake::CheckBuildSystem()
   cmake cm;
   cm.SetHomeDirectory("");
   cm.SetHomeOutputDirectory("");
+  cm.GetCurrentSnapshot().SetDefaultDefinitions();
   cmGlobalGenerator gg(&cm);
   cmsys::auto_ptr<cmMakefile> mf(new cmMakefile(&gg, cm.GetCurrentSnapshot()));
   if(!mf->ReadListFile(this->CheckBuildSystemArgument.c_str()) ||
@@ -1950,6 +2083,7 @@ int cmake::CheckBuildSystem()
       ggd(this->CreateGlobalGenerator(genName));
     if(ggd.get())
       {
+      cm.GetCurrentSnapshot().SetDefaultDefinitions();
       cmsys::auto_ptr<cmMakefile> mfd(new cmMakefile(ggd.get(),
                                                     cm.GetCurrentSnapshot()));
       cmsys::auto_ptr<cmLocalGenerator> lgd(
@@ -2431,6 +2565,38 @@ static bool cmakeCheckStampList(const char* stampList)
   return true;
 }
 
+bool cmake::IsMessageTypeVisible(cmake::MessageType t)
+{
+  bool isVisible = true;
+
+  if(t == cmake::DEPRECATION_ERROR)
+    {
+    // if CMAKE_ERROR_DEPRECATED is on, show the message, otherwise suppress it
+    const char* errorDeprecated = this->State->GetCacheEntryValue(
+                                                "CMAKE_ERROR_DEPRECATED");
+    if(cmSystemTools::IsOff(errorDeprecated))
+      {
+      isVisible = false;
+      }
+    }
+  else if (t == cmake::DEPRECATION_WARNING)
+    {
+    if (this->GetSuppressDeprecatedWarnings())
+      {
+      isVisible = false;
+      }
+    }
+  else if (t == cmake::AUTHOR_WARNING)
+    {
+    if (this->GetSuppressDevWarnings())
+      {
+      isVisible = false;
+      }
+    }
+
+  return isVisible;
+}
+
 bool cmake::PrintMessagePreamble(cmake::MessageType t, std::ostream& msg)
 {
   // Construct the message header.
@@ -2454,20 +2620,13 @@ bool cmake::PrintMessagePreamble(cmake::MessageType t, std::ostream& msg)
     {
     msg << "CMake Deprecation Warning";
     }
+  else if (t == cmake::AUTHOR_WARNING)
+    {
+    msg << "CMake Warning (dev)";
+    }
   else
     {
     msg << "CMake Warning";
-    if(t == cmake::AUTHOR_WARNING)
-      {
-      // Allow suppression of these warnings.
-      const char* suppress = this->State->GetCacheEntryValue(
-                                        "CMAKE_SUPPRESS_DEVELOPER_WARNINGS");
-      if(suppress && cmSystemTools::IsOn(suppress))
-        {
-        return false;
-        }
-      msg << " (dev)";
-      }
     }
   return true;
 }
@@ -2525,9 +2684,15 @@ void displayMessage(cmake::MessageType t, std::ostringstream& msg)
 
 //----------------------------------------------------------------------------
 void cmake::IssueMessage(cmake::MessageType t, std::string const& text,
-                         cmListFileBacktrace const& bt)
+                         cmListFileBacktrace const& bt,
+                         bool force)
 {
   cmListFileBacktrace backtrace = bt;
+
+  if (!force && !this->IsMessageTypeVisible(t))
+    {
+    return;
+    }
 
   std::ostringstream msg;
   if (!this->PrintMessagePreamble(t, msg))
@@ -2548,8 +2713,14 @@ void cmake::IssueMessage(cmake::MessageType t, std::string const& text,
 
 //----------------------------------------------------------------------------
 void cmake::IssueMessage(cmake::MessageType t, std::string const& text,
-                         cmListFileContext const& lfc)
+                         cmListFileContext const& lfc,
+                         bool force)
 {
+  if (!force && !this->IsMessageTypeVisible(t))
+    {
+    return;
+    }
+
   std::ostringstream msg;
   if (!this->PrintMessagePreamble(t, msg))
     {
@@ -2708,4 +2879,56 @@ void cmake::RunCheckForUnusedVariables()
     this->IssueMessage(cmake::WARNING, msg.str());
     }
 #endif
+}
+
+void cmake::SetSuppressDevWarnings(bool b)
+{
+  // equivalent to -Wno-dev
+  if (b)
+    {
+    this->DiagLevels["dev"] = DIAG_IGNORE;
+    }
+  // equivalent to -Wdev
+  else
+    {
+    this->DiagLevels["dev"] = std::max(this->DiagLevels["dev"],
+                                       DIAG_WARN);
+    }
+}
+
+bool cmake::GetSuppressDevWarnings(cmMakefile const* mf)
+{
+  /*
+   * The suppression CMake variable may be set in the CMake configuration file
+   * itself, so we have to check what its set to in the makefile if we can.
+   */
+  if (mf)
+    {
+    return mf->IsOn("CMAKE_SUPPRESS_DEVELOPER_WARNINGS");
+    }
+  else
+    {
+    const char* cacheEntryValue = this->State->GetCacheEntryValue(
+      "CMAKE_SUPPRESS_DEVELOPER_WARNINGS");
+    return cmSystemTools::IsOn(cacheEntryValue);
+    }
+}
+
+bool cmake::GetSuppressDeprecatedWarnings(cmMakefile const* mf)
+{
+  /*
+   * The suppression CMake variable may be set in the CMake configuration file
+   * itself, so we have to check what its set to in the makefile if we can.
+   */
+  if (mf)
+    {
+    return (mf->IsSet("CMAKE_WARN_DEPRECATED") &&
+            !mf->IsOn("CMAKE_WARN_DEPRECATED"));
+    }
+  else
+    {
+    const char* cacheEntryValue = this->State->GetCacheEntryValue(
+      "CMAKE_WARN_DEPRECATED");
+    return cacheEntryValue && cmSystemTools::IsOff(cacheEntryValue);
+    }
 }

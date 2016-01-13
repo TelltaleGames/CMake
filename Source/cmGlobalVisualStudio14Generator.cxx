@@ -86,6 +86,8 @@ public:
   	  names.push_back(vs14generatorName + std::string(" XBOne"));
       names.push_back(vs14generatorName + std::string(" PS4"));
     }
+
+  virtual bool SupportsToolset() const { return true; }
 };
 
 //----------------------------------------------------------------------------

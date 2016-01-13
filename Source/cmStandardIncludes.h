@@ -54,6 +54,8 @@
 
 #if defined( _MSC_VER )
 typedef unsigned short mode_t;
+#else
+# include <sys/types.h>
 #endif
 
 // use this class to shrink the size of symbols in .o files
@@ -122,5 +124,11 @@ static thisClass* SafeDownCast(cmObject *c) \
   return 0;\
 } \
 class cmTypeMacro_UseTrailingSemicolon
+
+enum cmTargetLinkLibraryType {
+  GENERAL_LibraryType,
+  DEBUG_LibraryType,
+  OPTIMIZED_LibraryType
+};
 
 #endif

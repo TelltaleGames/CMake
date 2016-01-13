@@ -91,6 +91,9 @@ public:
     ImportedOnly
   };
 
+  void CreateImportedGenerationObjects(cmMakefile* mf,
+                             std::vector<std::string> const& targets,
+                             std::vector<cmGeneratorTarget const*>& exports);
   void CreateGenerationObjects(TargetTypes targetTypes = AllTargets);
 
   /**
@@ -247,7 +250,9 @@ public:
   cmTarget* FindTarget(const std::string& name,
                        bool excludeAliases = false) const;
 
-  void AddAlias(const std::string& name, cmTarget *tgt);
+  cmGeneratorTarget* FindGeneratorTarget(const std::string& name) const;
+
+  void AddAlias(const std::string& name, const std::string& tgtName);
   bool IsAlias(const std::string& name) const;
 
   /** Determine if a name resolves to a framework on disk or a built target
@@ -273,8 +278,6 @@ public:
   std::set<std::string> const& GetDirectoryContent(std::string const& dir,
                                                    bool needDisk = true);
 
-  void AddTarget(cmTarget* t);
-
   static bool IsReservedTarget(std::string const& name);
 
   virtual const char* GetAllTargetName()         const { return "ALL_BUILD"; }
@@ -299,14 +302,6 @@ public:
   // via a target_link_libraries or add_dependencies
   TargetDependSet const& GetTargetDirectDepends(
       const cmGeneratorTarget* target);
-
-  /** Get per-target generator information.  */
-  cmGeneratorTarget* GetGeneratorTarget(cmTarget const*) const;
-
-  void AddGeneratorTarget(cmTarget* t, cmGeneratorTarget* gt)
-  {
-    this->GeneratorTargets[t] = gt;
-  }
 
   const std::map<std::string, std::vector<cmLocalGenerator*> >& GetProjectMap()
                                                const {return this->ProjectMap;}
@@ -354,15 +349,16 @@ public:
   void CreateEvaluationSourceFiles(std::string const& config) const;
 
   void SetFilenameTargetDepends(cmSourceFile* sf,
-                                std::set<cmTarget const*> tgts);
-  std::set<cmTarget const*> const&
+                                std::set<const cmGeneratorTarget*> tgts);
+  const std::set<const cmGeneratorTarget*>&
   GetFilenameTargetDepends(cmSourceFile* sf) const;
 
 #if defined(CMAKE_BUILD_WITH_CMAKE)
   cmFileLockPool& GetFileLockPool() { return FileLockPool; }
 #endif
 
-  bool GetConfigureDoneCMP0026() const { return this->ConfigureDoneCMP0026; }
+  bool GetConfigureDoneCMP0026() const
+  { return this->ConfigureDoneCMP0026AndCMP0024; }
 
   std::string MakeSilentFlag;
 protected:
@@ -372,7 +368,7 @@ protected:
   void GetTargetSets(TargetDependSet& projectTargets,
                              TargetDependSet& originalTargets,
                              cmLocalGenerator* root, GeneratorVector const&);
-  bool IsRootOnlyTarget(cmTarget* target) const;
+  bool IsRootOnlyTarget(cmGeneratorTarget* target) const;
   void AddTargetDepends(const cmGeneratorTarget* target,
                         TargetDependSet& projectTargets);
   void SetLanguageEnabledFlag(const std::string& l, cmMakefile* mf);
@@ -421,19 +417,14 @@ protected:
   std::map<std::string, cmExportBuildFileGenerator*> BuildExportSets;
   std::map<std::string, cmExportBuildFileGenerator*> BuildExportExportSets;
 
-  // All targets in the entire project.
-#if defined(CMAKE_BUILD_WITH_CMAKE)
-#ifdef CMake_HAVE_CXX11_UNORDERED_MAP
-  typedef std::unordered_map<std::string, cmTarget*> TargetMap;
-#else
-  typedef cmsys::hash_map<std::string, cmTarget*> TargetMap;
-#endif
-#else
-  typedef std::map<std::string,cmTarget *> TargetMap;
-#endif
-  TargetMap TotalTargets;
-  TargetMap AliasTargets;
-  TargetMap ImportedTargets;
+  std::map<std::string, std::string> AliasTargets;
+
+  cmTarget* FindTargetImpl(std::string const& name) const;
+  cmTarget* FindImportedTargetImpl(std::string const& name) const;
+
+  cmGeneratorTarget* FindGeneratorTargetImpl(std::string const& name) const;
+  cmGeneratorTarget*
+  FindImportedGeneratorTargetImpl(std::string const& name) const;
 
   const char* GetPredefinedTargetsFolder();
   virtual bool UseFolderProperty();
@@ -458,7 +449,7 @@ private:
   void WriteRuleHashes(std::string const& pfile);
 
   void WriteSummary();
-  void WriteSummary(cmTarget* target);
+  void WriteSummary(cmGeneratorTarget* target);
   void FinalizeTargetCompileInfo();
 
   virtual void ForceLinkerLanguages();
@@ -467,6 +458,8 @@ private:
 
   void CheckCompilerIdCompatibility(cmMakefile* mf,
                                     std::string const& lang) const;
+
+  void ComputeBuildFileGenerators();
 
   cmExternalMakefileProjectGenerator* ExtraGenerator;
 
@@ -477,10 +470,10 @@ private:
   typedef std::map<cmGeneratorTarget const*, TargetDependSet> TargetDependMap;
   TargetDependMap TargetDependencies;
 
-  // Per-target generator information.
-  cmGeneratorTargetsType GeneratorTargets;
   friend class cmake;
-  void CreateGeneratorTargets(TargetTypes targetTypes, cmLocalGenerator* lg);
+  void CreateGeneratorTargets(TargetTypes targetTypes, cmMakefile* mf,
+                   cmLocalGenerator* lg,
+                   std::map<cmTarget*, cmGeneratorTarget*> const& importedMap);
   void CreateGeneratorTargets(TargetTypes targetTypes);
 
   void ClearGeneratorMembers();
@@ -505,7 +498,7 @@ private:
   // track targets to issue CMP0042 warning for.
   std::set<std::string> CMP0042WarnTargets;
 
-  mutable std::map<cmSourceFile*, std::set<cmTarget const*> >
+  mutable std::map<cmSourceFile*, std::set<cmGeneratorTarget const*> >
   FilenameTargetDepends;
 
 #if defined(CMAKE_BUILD_WITH_CMAKE)
@@ -520,7 +513,7 @@ protected:
   bool ForceUnixPaths;
   bool ToolSupportsColor;
   bool InstallTargetEnabled;
-  bool ConfigureDoneCMP0026;
+  bool ConfigureDoneCMP0026AndCMP0024;
 };
 
 #endif

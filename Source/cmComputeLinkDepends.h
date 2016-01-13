@@ -13,7 +13,7 @@
 #define cmComputeLinkDepends_h
 
 #include "cmStandardIncludes.h"
-#include "cmTarget.h"
+#include "cmLinkItem.h"
 
 #include "cmGraphAdjacencyList.h"
 
@@ -52,7 +52,7 @@ public:
   EntryVector const& Compute();
 
   void SetOldLinkDirMode(bool b);
-  std::set<cmTarget const*> const& GetOldWrongConfigItems() const
+  std::set<cmGeneratorTarget const*> const& GetOldWrongConfigItems() const
     { return this->OldWrongConfigItems; }
 
 private:
@@ -72,8 +72,8 @@ private:
   void AddDirectLinkEntries();
   template <typename T>
     void AddLinkEntries(int depender_index, std::vector<T> const& libs);
-  cmTarget const* FindTargetToLink(int depender_index,
-                                   const std::string& name);
+  cmGeneratorTarget const* FindTargetToLink(int depender_index,
+                                            const std::string& name);
 
   // One entry for each unique item.
   std::vector<LinkEntry> EntryList;
@@ -150,11 +150,11 @@ private:
 
   // Record of the original link line.
   std::vector<int> OriginalEntries;
-  std::set<cmTarget const*> OldWrongConfigItems;
+  std::set<cmGeneratorTarget const*> OldWrongConfigItems;
   void CheckWrongConfigItem(cmLinkItem const& item);
 
   int ComponentOrderId;
-  cmTarget::LinkLibraryType LinkType;
+  cmTargetLinkLibraryType LinkType;
   bool HasConfig;
   bool DebugMode;
   bool OldLinkDirMode;

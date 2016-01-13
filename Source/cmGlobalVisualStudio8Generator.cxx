@@ -84,6 +84,8 @@ public:
       names.push_back("Visual Studio 8 2005 " + *i);
       }
   }
+
+  virtual bool SupportsToolset() const { return false; }
 };
 
 //----------------------------------------------------------------------------
@@ -280,7 +282,7 @@ bool cmGlobalVisualStudio8Generator::AddCheckTarget()
                           noCommandLines);
 
   cmGeneratorTarget* gt = new cmGeneratorTarget(tgt, lg);
-  mf->AddGeneratorTarget(tgt, gt);
+  lg->AddGeneratorTarget(gt);
 
   // Organize in the "predefined targets" folder:
   //
@@ -377,14 +379,18 @@ void cmGlobalVisualStudio8Generator::AddExtraIDETargets()
   cmGlobalVisualStudio7Generator::AddExtraIDETargets();
   if(this->AddCheckTarget())
     {
-    // All targets depend on the build-system check target.
-    for(TargetMap::const_iterator
-          ti = this->TotalTargets.begin();
-        ti != this->TotalTargets.end(); ++ti)
+    for (unsigned int i = 0; i < this->LocalGenerators.size(); ++i)
       {
-      if(ti->first != CMAKE_CHECK_BUILD_SYSTEM_TARGET)
+      std::vector<cmGeneratorTarget*> tgts =
+          this->LocalGenerators[i]->GetGeneratorTargets();
+      // All targets depend on the build-system check target.
+      for(std::vector<cmGeneratorTarget*>::iterator ti = tgts.begin();
+          ti != tgts.end(); ++ti)
         {
-        ti->second->AddUtility(CMAKE_CHECK_BUILD_SYSTEM_TARGET);
+        if((*ti)->GetName() != CMAKE_CHECK_BUILD_SYSTEM_TARGET)
+          {
+          (*ti)->Target->AddUtility(CMAKE_CHECK_BUILD_SYSTEM_TARGET);
+          }
         }
       }
     }
@@ -410,7 +416,7 @@ cmGlobalVisualStudio8Generator
 void
 cmGlobalVisualStudio8Generator
 ::WriteProjectConfigurations(
-  std::ostream& fout, const std::string& name, cmTarget::TargetType type,
+  std::ostream& fout, const std::string& name, cmState::TargetType type,
   std::vector<std::string> const& configs,
   const std::set<std::string>& configsPartOfDefaultBuild,
   std::string const& platformMapping)
@@ -434,7 +440,7 @@ cmGlobalVisualStudio8Generator
                platformMapping : this->GetPlatformName())
            << "\n";
       }
-	bool xboneDeploy = (this->GetPlatformName() == "Durango") && (type == cmTarget::EXECUTABLE);
+	bool xboneDeploy = (this->GetPlatformName() == "Durango") && (type == cmState::EXECUTABLE);
     if(this->NeedsDeploy(type) || xboneDeploy)
       {
       fout << "\t\t{" << guid << "}." << *i
@@ -448,10 +454,10 @@ cmGlobalVisualStudio8Generator
 
 //----------------------------------------------------------------------------
 bool
-cmGlobalVisualStudio8Generator::NeedsDeploy(cmTarget::TargetType type) const
+cmGlobalVisualStudio8Generator::NeedsDeploy(cmState::TargetType type) const
 {
-  bool needsDeploy = (type == cmTarget::EXECUTABLE ||
-                      type == cmTarget::SHARED_LIBRARY);
+  bool needsDeploy = (type == cmState::EXECUTABLE ||
+                      type == cmState::SHARED_LIBRARY);
   return this->TargetsWindowsCE() && needsDeploy;
 }
 
@@ -465,15 +471,15 @@ bool cmGlobalVisualStudio8Generator::ComputeTargetDepends()
 
 //----------------------------------------------------------------------------
 void cmGlobalVisualStudio8Generator::WriteProjectDepends(
-  std::ostream& fout, const std::string&, const char*, cmTarget const& t)
+  std::ostream& fout, const std::string&, const char*,
+        cmGeneratorTarget const* gt)
 {
-  cmGeneratorTarget* gt = this->GetGeneratorTarget(&t);
   TargetDependSet const& unordered = this->GetTargetDirectDepends(gt);
   OrderedTargetDependSet depends(unordered, std::string());
   for(OrderedTargetDependSet::const_iterator i = depends.begin();
       i != depends.end(); ++i)
     {
-    if((*i)->GetType() == cmTarget::INTERFACE_LIBRARY)
+    if((*i)->GetType() == cmState::INTERFACE_LIBRARY)
       {
       continue;
       }
@@ -484,16 +490,17 @@ void cmGlobalVisualStudio8Generator::WriteProjectDepends(
 
 //----------------------------------------------------------------------------
 bool cmGlobalVisualStudio8Generator::NeedLinkLibraryDependencies(
-  cmTarget& target)
+        cmGeneratorTarget *target)
 {
   // Look for utility dependencies that magically link.
   for(std::set<std::string>::const_iterator ui =
-        target.GetUtilities().begin();
-      ui != target.GetUtilities().end(); ++ui)
+        target->GetUtilities().begin();
+      ui != target->GetUtilities().end(); ++ui)
     {
-    if(cmTarget* depTarget = this->FindTarget(ui->c_str()))
+    if(cmGeneratorTarget* depTarget =
+        target->GetLocalGenerator()->FindGeneratorTargetToUse(ui->c_str()))
       {
-      if(depTarget->GetType() != cmTarget::INTERFACE_LIBRARY
+      if(depTarget->GetType() != cmState::INTERFACE_LIBRARY
           && depTarget->GetProperty("EXTERNAL_MSPROJECT"))
         {
         // This utility dependency names an external .vcproj target.

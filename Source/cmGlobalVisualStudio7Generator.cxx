@@ -402,8 +402,8 @@ void cmGlobalVisualStudio7Generator::WriteTargetConfigurations(
   for(OrderedTargetDependSet::const_iterator tt =
         projectTargets.begin(); tt != projectTargets.end(); ++tt)
     {
-    cmTarget const* target = (*tt)->Target;
-    if(target->GetType() == cmTarget::INTERFACE_LIBRARY)
+    cmGeneratorTarget const* target = *tt;
+    if(target->GetType() == cmState::INTERFACE_LIBRARY)
       {
       continue;
       }
@@ -442,8 +442,8 @@ void cmGlobalVisualStudio7Generator::WriteTargetsToSolution(
   for(OrderedTargetDependSet::const_iterator tt =
         projectTargets.begin(); tt != projectTargets.end(); ++tt)
     {
-    cmTarget const* target = (*tt)->Target;
-    if(target->GetType() == cmTarget::INTERFACE_LIBRARY)
+    cmGeneratorTarget const* target = *tt;
+    if(target->GetType() == cmState::INTERFACE_LIBRARY)
       {
       continue;
       }
@@ -469,9 +469,7 @@ void cmGlobalVisualStudio7Generator::WriteTargetsToSolution(
         target->GetProperty("GENERATOR_FILE_NAME");
       if(vcprojName)
         {
-        cmLocalGenerator* lg =
-            root->GetGlobalGenerator()->GetGeneratorTarget(target)
-            ->GetLocalGenerator();
+        cmLocalGenerator* lg = target->GetLocalGenerator();
         std::string dir = lg->GetCurrentBinaryDirectory();
         dir = root->Convert(dir.c_str(),
                             cmLocalGenerator::START_OUTPUT);
@@ -480,7 +478,7 @@ void cmGlobalVisualStudio7Generator::WriteTargetsToSolution(
           dir = ""; // msbuild cannot handle ".\" prefix
           }
         this->WriteProject(fout, vcprojName, dir.c_str(),
-                           *target);
+                           target);
         written = true;
         }
       }
@@ -536,19 +534,19 @@ void cmGlobalVisualStudio7Generator::WriteTargetDepends(
   for(OrderedTargetDependSet::const_iterator tt =
         projectTargets.begin(); tt != projectTargets.end(); ++tt)
     {
-    cmTarget const* target = (*tt)->Target;
-    if(target->GetType() == cmTarget::INTERFACE_LIBRARY)
+    cmGeneratorTarget const* target = *tt;
+    if(target->GetType() == cmState::INTERFACE_LIBRARY)
       {
       continue;
       }
-    cmMakefile* mf = target->GetMakefile();
     const char *vcprojName =
       target->GetProperty("GENERATOR_FILE_NAME");
     if (vcprojName)
       {
-      std::string dir = mf->GetCurrentSourceDirectory();
+      std::string dir = target->GetLocalGenerator()
+              ->GetCurrentSourceDirectory();
       this->WriteProjectDepends(fout, vcprojName,
-                                dir.c_str(), *target);
+                                dir.c_str(), target);
       }
     }
 }
@@ -688,7 +686,8 @@ cmGlobalVisualStudio7Generator::ConvertToSolutionPath(const char* path)
 // the libraries it uses are also done here
 void cmGlobalVisualStudio7Generator::WriteProject(std::ostream& fout,
                                const std::string& dspname,
-                               const char* dir, cmTarget const& target)
+                               const char* dir,
+                               cmGeneratorTarget const* target)
 {
    // check to see if this is a fortran build
   const char* ext = ".vcproj";
@@ -706,7 +705,7 @@ void cmGlobalVisualStudio7Generator::WriteProject(std::ostream& fout,
        << dspname << ext << "\", \"{"
        << this->GetGUID(dspname) << "}\"\nEndProject\n";
 
-  UtilityDependsMap::iterator ui = this->UtilityDepends.find(&target);
+  UtilityDependsMap::iterator ui = this->UtilityDepends.find(target);
   if(ui != this->UtilityDepends.end())
     {
     const char* uname = ui->second.c_str();
@@ -728,11 +727,11 @@ void
 cmGlobalVisualStudio7Generator
 ::WriteProjectDepends(std::ostream& fout,
                       const std::string& dspname,
-                      const char*, cmTarget const& target)
+                      const char*, cmGeneratorTarget const* target)
 {
   int depcount = 0;
   std::string dspguid = this->GetGUID(dspname);
-  VSDependSet const& depends = this->VSTargetDepends[&target];
+  VSDependSet const& depends = this->VSTargetDepends[target];
   for(VSDependSet::const_iterator di = depends.begin();
       di != depends.end(); ++di)
     {
@@ -741,7 +740,7 @@ cmGlobalVisualStudio7Generator
     if(guid.empty())
       {
       std::string m = "Target: ";
-      m += target.GetName();
+      m += target->GetName();
       m += " depends on unknown target: ";
       m += name;
       cmSystemTools::Error(m.c_str());
@@ -750,7 +749,7 @@ cmGlobalVisualStudio7Generator
     depcount++;
     }
 
-  UtilityDependsMap::iterator ui = this->UtilityDepends.find(&target);
+  UtilityDependsMap::iterator ui = this->UtilityDepends.find(target);
   if(ui != this->UtilityDepends.end())
     {
     const char* uname = ui->second.c_str();
@@ -763,7 +762,7 @@ cmGlobalVisualStudio7Generator
 // executables to the libraries it uses are also done here
 void cmGlobalVisualStudio7Generator
 ::WriteProjectConfigurations(
-  std::ostream& fout, const std::string& name, cmTarget::TargetType,
+  std::ostream& fout, const std::string& name, cmState::TargetType,
   std::vector<std::string> const& configs,
   const std::set<std::string>& configsPartOfDefaultBuild,
   const std::string& platformMapping)
@@ -890,13 +889,14 @@ void cmGlobalVisualStudio7Generator::WriteSLNHeader(std::ostream& fout)
 
 //----------------------------------------------------------------------------
 std::string
-cmGlobalVisualStudio7Generator::WriteUtilityDepend(cmTarget const* target)
+cmGlobalVisualStudio7Generator::WriteUtilityDepend(
+        cmGeneratorTarget const* target)
 {
   std::vector<std::string> configs;
-  target->GetMakefile()->GetConfigurations(configs);
+  target->Target->GetMakefile()->GetConfigurations(configs);
   std::string pname = target->GetName();
   pname += "_UTILITY";
-  std::string fname = target->GetMakefile()->GetCurrentBinaryDirectory();
+  std::string fname = target->GetLocalGenerator()->GetCurrentBinaryDirectory();
   fname += "/";
   fname += pname;
   fname += ".vcproj";
@@ -997,13 +997,14 @@ cmGlobalVisualStudio7Generator
 std::set<std::string>
 cmGlobalVisualStudio7Generator::IsPartOfDefaultBuild(
   std::vector<std::string> const& configs,
-  OrderedTargetDependSet const& projectTargets, cmTarget const* target)
+  OrderedTargetDependSet const& projectTargets,
+  cmGeneratorTarget const* target)
 {
   std::set<std::string> activeConfigs;
   // if it is a utilitiy target then only make it part of the
   // default build if another target depends on it
   int type = target->GetType();
-  if (type == cmTarget::GLOBAL_TARGET)
+  if (type == cmState::GLOBAL_TARGET)
     {
     // check if INSTALL target is part of default build
     if(target->GetName() == "INSTALL")
@@ -1012,12 +1013,13 @@ cmGlobalVisualStudio7Generator::IsPartOfDefaultBuild(
       for(std::vector<std::string>::const_iterator i = configs.begin();
           i != configs.end(); ++i)
         {
-        const char* propertyValue = target->GetMakefile()
+        const char* propertyValue = target->Target->GetMakefile()
           ->GetDefinition("CMAKE_VS_INCLUDE_INSTALL_TO_DEFAULT_BUILD");
         cmGeneratorExpression ge;
         cmsys::auto_ptr<cmCompiledGeneratorExpression>
           cge = ge.Parse(propertyValue);
-        if(cmSystemTools::IsOn(cge->Evaluate(target->GetMakefile(), *i)))
+        if(cmSystemTools::IsOn(cge->Evaluate(target->GetLocalGenerator(),
+                                             *i)))
           {
           activeConfigs.insert(*i);
           }
@@ -1025,17 +1027,16 @@ cmGlobalVisualStudio7Generator::IsPartOfDefaultBuild(
       }
     return activeConfigs;
     }
-  if(type == cmTarget::UTILITY && !this->IsDependedOn(projectTargets, target))
+  if(type == cmState::UTILITY && !this->IsDependedOn(projectTargets, target))
     {
     return activeConfigs;
     }
-  cmGeneratorTarget* gt = this->GetGeneratorTarget(target);
   // inspect EXCLUDE_FROM_DEFAULT_BUILD[_<CONFIG>] properties
   for(std::vector<std::string>::const_iterator i = configs.begin();
       i != configs.end(); ++i)
     {
     const char* propertyValue =
-      gt->GetFeature("EXCLUDE_FROM_DEFAULT_BUILD", i->c_str());
+      target->GetFeature("EXCLUDE_FROM_DEFAULT_BUILD", i->c_str());
     if(cmSystemTools::IsOff(propertyValue))
       {
       activeConfigs.insert(*i);
@@ -1047,9 +1048,8 @@ cmGlobalVisualStudio7Generator::IsPartOfDefaultBuild(
 bool
 cmGlobalVisualStudio7Generator
 ::IsDependedOn(OrderedTargetDependSet const& projectTargets,
-               cmTarget const* targetIn)
+               cmGeneratorTarget const* gtIn)
 {
-  cmGeneratorTarget* gtIn = this->GetGeneratorTarget(targetIn);
   for (OrderedTargetDependSet::const_iterator l = projectTargets.begin();
        l != projectTargets.end(); ++l)
     {

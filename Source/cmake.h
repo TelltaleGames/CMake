@@ -68,6 +68,11 @@ class cmake
     DEPRECATION_WARNING
   };
 
+  enum DiagLevel
+  {
+    DIAG_IGNORE,
+    DIAG_WARN
+  };
 
   /** \brief Describes the working modes of cmake */
   enum WorkingMode
@@ -89,6 +94,13 @@ class cmake
      */
     FIND_PACKAGE_MODE
   };
+
+  struct GeneratorInfo
+    {
+    std::string name;
+    bool supportsToolset;
+    };
+
   typedef std::map<std::string, cmInstalledFile> InstalledFilesMap;
 
   /// Default constructor
@@ -161,7 +173,7 @@ class cmake
   void SetGlobalGenerator(cmGlobalGenerator *);
 
   ///! Get the names of the current registered generators
-  void GetRegisteredGenerators(std::vector<std::string>& names);
+  void GetRegisteredGenerators(std::vector<GeneratorInfo>& generators);
 
   ///! Set the name of the selected generator-specific platform.
   void SetGeneratorPlatform(std::string const& ts)
@@ -181,6 +193,11 @@ class cmake
 
   ///! get the cmCachemManager used by this invocation of cmake
   cmCacheManager *GetCacheManager() { return this->CacheManager; }
+
+  const std::vector<std::string>& GetSourceExtensions() const
+    {return this->SourceFileExtensions;}
+  const std::vector<std::string>& GetHeaderExtensions() const
+    {return this->HeaderFileExtensions;}
 
   /**
    * Given a variable name, return its value (as a string).
@@ -291,17 +308,28 @@ class cmake
   std::string const& GetCMakeEditCommand() const
     { return this->CMakeEditCommand; }
 
-  void SetSuppressDevWarnings(bool v)
-    {
-      this->SuppressDevWarnings = v;
-      this->DoSuppressDevWarnings = true;
-    }
+  void SetSuppressDevWarnings(bool v);
+  /*
+   * Get the state of the suppression of developer (author) warnings.
+   * Returns false, by default, if developer warnings should be shown, true
+   * otherwise.
+   */
+  bool GetSuppressDevWarnings(cmMakefile const* mf = NULL);
+
+  /*
+   * Get the state of the suppression of deprecated warnings.
+   * Returns false, by default, if deprecated warnings should be shown, true
+   * otherwise.
+   */
+  bool GetSuppressDeprecatedWarnings(cmMakefile const* mf = NULL);
 
   /** Display a message to the user.  */
   void IssueMessage(cmake::MessageType t, std::string const& text,
-        cmListFileBacktrace const& backtrace = cmListFileBacktrace());
+        cmListFileBacktrace const& backtrace = cmListFileBacktrace(),
+        bool force = false);
   void IssueMessage(cmake::MessageType t, std::string const& text,
-        cmListFileContext const& lfc);
+        cmListFileContext const& lfc,
+        bool force = false);
 
   ///! run the --build option
   int Build(const std::string& dir,
@@ -339,8 +367,7 @@ protected:
 
   cmGlobalGenerator *GlobalGenerator;
   cmCacheManager *CacheManager;
-  bool SuppressDevWarnings;
-  bool DoSuppressDevWarnings;
+  std::map<std::string, DiagLevel> DiagLevels;
   std::string GeneratorPlatform;
   std::string GeneratorToolset;
 
@@ -391,6 +418,8 @@ private:
   std::string CheckStampFile;
   std::string CheckStampList;
   std::string VSSolutionFile;
+  std::vector<std::string> SourceFileExtensions;
+  std::vector<std::string> HeaderFileExtensions;
   bool ClearBuildSystem;
   bool DebugTryCompile;
   cmFileTimeComparison* FileComparison;
@@ -405,6 +434,12 @@ private:
   // Print a list of valid generators to stderr.
   void PrintGeneratorList();
 
+  /*
+   * Check if messages of this type should be output, based on the state of the
+   * warning and error output CMake variables, in the cache.
+   */
+  bool IsMessageTypeVisible(cmake::MessageType t);
+
   bool PrintMessagePreamble(cmake::MessageType t, std::ostream& msg);
 };
 
@@ -416,7 +451,9 @@ private:
   {"-T <toolset-name>", "Specify toolset name if supported by generator."}, \
   {"-A <platform-name>", "Specify platform name if supported by generator."}, \
   {"-Wno-dev", "Suppress developer warnings."},\
-  {"-Wdev", "Enable developer warnings."}
+  {"-Wdev", "Enable developer warnings."},\
+  {"-Wdeprecated", "Enable deprecation warnings."},\
+  {"-Wno-deprecated", "Suppress deprecation warnings."}
 
 #define FOR_EACH_C_FEATURE(F) \
   F(c_function_prototypes) \
