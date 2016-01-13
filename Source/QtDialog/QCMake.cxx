@@ -26,7 +26,6 @@
 QCMake::QCMake(QObject* p)
   : QObject(p)
 {
-  this->SuppressDevWarnings = false;
   this->WarnUninitializedMode = false;
   this->WarnUnusedMode = false;
   qRegisterMetaType<QCMakeProperty>();
@@ -167,7 +166,6 @@ void QCMake::configure()
   this->CMakeInstance->SetGeneratorPlatform("");
   this->CMakeInstance->SetGeneratorToolset(this->Toolset.toLocal8Bit().data());
   this->CMakeInstance->LoadCache();
-  this->CMakeInstance->SetSuppressDevWarnings(this->SuppressDevWarnings);
   this->CMakeInstance->SetWarnUninitialized(this->WarnUninitializedMode);
   this->CMakeInstance->SetWarnUnused(this->WarnUnusedMode);
   this->CMakeInstance->PreLoadCMakeFiles();
@@ -457,10 +455,44 @@ bool QCMake::getDebugOutput() const
   return this->CMakeInstance->GetDebugOutput();
 }
 
+bool QCMake::getSuppressDevWarnings()
+{
+  return this->CMakeInstance->GetSuppressDevWarnings();
+}
 
 void QCMake::setSuppressDevWarnings(bool value)
 {
-  this->SuppressDevWarnings = value;
+  this->CMakeInstance->SetSuppressDevWarnings(value);
+}
+
+bool QCMake::getSuppressDeprecatedWarnings()
+{
+  return this->CMakeInstance->GetSuppressDeprecatedWarnings();
+}
+
+void QCMake::setSuppressDeprecatedWarnings(bool value)
+{
+  this->CMakeInstance->SetSuppressDeprecatedWarnings(value);
+}
+
+bool QCMake::getDevWarningsAsErrors()
+{
+  return this->CMakeInstance->GetDevWarningsAsErrors();
+}
+
+void QCMake::setDevWarningsAsErrors(bool value)
+{
+  this->CMakeInstance->SetDevWarningsAsErrors(value);
+}
+
+bool QCMake::getDeprecatedWarningsAsErrors()
+{
+  return this->CMakeInstance->GetDeprecatedWarningsAsErrors();
+}
+
+void QCMake::setDeprecatedWarningsAsErrors(bool value)
+{
+  this->CMakeInstance->SetDeprecatedWarningsAsErrors(value);
 }
 
 void QCMake::setWarnUninitializedMode(bool value)

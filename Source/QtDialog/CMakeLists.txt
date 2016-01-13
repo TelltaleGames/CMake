@@ -115,6 +115,8 @@ set(SRCS
   QCMakeWidgets.h
   RegexExplorer.cxx
   RegexExplorer.h
+  WarningMessagesDialog.cxx
+  WarningMessagesDialog.h
   )
 QT4_WRAP_UI(UI_SRCS
   CMakeSetupDialog.ui
@@ -122,6 +124,7 @@ QT4_WRAP_UI(UI_SRCS
   CrossCompiler.ui
   AddCacheEntry.ui
   RegexExplorer.ui
+  WarningMessagesDialog.ui
   )
 QT4_WRAP_CPP(MOC_SRCS
   AddCacheEntry.h
@@ -132,6 +135,7 @@ QT4_WRAP_CPP(MOC_SRCS
   QCMakeCacheView.h
   QCMakeWidgets.h
   RegexExplorer.h
+  WarningMessagesDialog.h
   )
 QT4_ADD_RESOURCES(RC_SRCS CMakeSetup.qrc)
 
@@ -189,7 +193,7 @@ if(UNIX AND NOT APPLE)
   foreach (size IN ITEMS 32 128)
     install(
       FILES       "${CMAKE_CURRENT_SOURCE_DIR}/CMakeSetup${size}.png"
-      DESTINATION "share/icons/hicolor/${size}x${size}/apps"
+      DESTINATION "${CMAKE_XDGDATA_DIR}/icons/hicolor/${size}x${size}/apps"
       ${COMPONENT}
       RENAME      "CMakeSetup.png")
   endforeach ()
@@ -197,10 +201,10 @@ if(UNIX AND NOT APPLE)
   # install a desktop file so CMake appears in the application start menu
   # with an icon
   install(FILES CMake.desktop
-    DESTINATION share/applications
+    DESTINATION "${CMAKE_XDGDATA_DIR}/applications"
     ${COMPONENT})
   install(FILES cmakecache.xml
-    DESTINATION share/mime/packages
+    DESTINATION "${CMAKE_XDGDATA_DIR}/mime/packages"
     ${COMPONENT})
 endif()
 

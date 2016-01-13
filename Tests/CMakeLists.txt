@@ -685,7 +685,7 @@ ${CMake_BINARY_DIR}/bin/cmake -DDIR=dev -P ${CMake_SOURCE_DIR}/Utilities/Release
   endmacro()
   if(CMAKE_BUILD_NIGHTLY_RELEASES)
     ADD_NIGHTLY_BUILD_TEST(CMakeNightlyWindows
-      dash2win64_release.cmake)
+      dash3win7_release.cmake)
     ADD_NIGHTLY_BUILD_TEST(CMakeNightlyOSX
       dashmacmini5_release.cmake)
     ADD_NIGHTLY_BUILD_TEST(CMakeNightlyLinux32
@@ -1362,12 +1362,21 @@ ${CMake_BINARY_DIR}/bin/cmake -DDIR=dev -P ${CMake_SOURCE_DIR}/Utilities/Release
   if(CMake_TEST_FindGSL)
     add_subdirectory(FindGSL)
   endif()
+
+  if(CMake_TEST_FindGTest)
+    add_subdirectory(FindGTest)
+  endif()
+
   if(CMake_TEST_FindJsonCpp)
     add_subdirectory(FindJsonCpp)
   endif()
 
   if(CMake_TEST_FindOpenSSL)
     add_subdirectory(FindOpenSSL)
+  endif()
+
+  if(CMake_TEST_FindTIFF)
+    add_subdirectory(FindTIFF)
   endif()
 
   if(CMake_TEST_FindXercesC)

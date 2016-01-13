@@ -467,37 +467,29 @@ void cmVisualStudio10TargetGenerator::Generate()
                              << "</TargetFrameworkVersion>\n";
     }
 
-  //Support for adding global properties
-  if(this->Makefile->GetState())
+  std::vector<std::string> keys = this->GeneratorTarget->GetPropertyKeys();
+  for(std::vector<std::string>::const_iterator keyIt = keys.begin();
+      keyIt != keys.end(); ++keyIt)
     {
-    const cmPropertyMap& globalProps = this->Makefile->GetState()->GetGlobalProperties();
-    for(cmPropertyMap::const_iterator i = globalProps.begin(); i != globalProps.end(); ++i)
+    static const char* prefix = "VS_GLOBAL_";
+    if(keyIt->find(prefix) != 0)
+      continue;
+    std::string globalKey = keyIt->substr(strlen(prefix));
+    // Skip invalid or separately-handled properties.
+    if(globalKey == "" ||
+       globalKey == "PROJECT_TYPES" ||
+       globalKey == "ROOTNAMESPACE" ||
+       globalKey == "KEYWORD")
       {
-      if(i->first.find("VS_GLOBAL_") == 0 && !this->GeneratorTarget->Target->GetProperty(i->first))
-        {
-         std::string name = i->first.substr(10);
-         if(name != "")
-          {
-          this->WriteString((std::string("<") + name + std::string(">")).c_str(), 2);
-          (*this->BuildFileStream) << cmVS10EscapeXML(i->second.GetValue()) << "</" << name << ">\n";
-          }
-        }
+      continue;
       }
-    }
-
-  // Support adding target specific properties
-  const cmPropertyMap& targetProps = this->GeneratorTarget->Target->GetProperties();
-  for(cmPropertyMap::const_iterator i = targetProps.begin(); i != targetProps.end(); ++i)
-    {
-    if(i->first.find("VS_GLOBAL_") == 0)
-      {
-      std::string name = i->first.substr(10);
-      if(name != "")
-        {
-        this->WriteString((std::string("<") + name + std::string(">")).c_str(), 2);
-        (*this->BuildFileStream) << cmVS10EscapeXML(i->second.GetValue()) << "</" << name << ">\n";
-        }
-      }
+    const char* value = this->GeneratorTarget->GetProperty(keyIt->c_str());
+    if (!value)
+      continue;
+    this->WriteString("<", 2);
+    (*this->BuildFileStream) << globalKey << ">"
+                             << cmVS10EscapeXML(value)
+                             << "</" << globalKey << ">\n";
     }
 
   this->WriteString("</PropertyGroup>\n", 1);
@@ -2888,14 +2880,16 @@ cmVisualStudio10TargetGenerator::ComputeLinkOptions(std::string const& config)
       linkOptions.AddFlag("StackReserveSize", stackVal);
       }
 
-    if(linkOptions.IsDebug() || flags.find("/debug") != flags.npos)
+    if (this->LocalGenerator->GetVersion() >=
+        cmGlobalVisualStudioGenerator::VS14)
       {
-      linkOptions.AddFlag("GenerateDebugInformation", "true");
+      linkOptions.AddFlag("GenerateDebugInformation", "No");
       }
     else
       {
       linkOptions.AddFlag("GenerateDebugInformation", "false");
       }
+
     std::string pdb = this->GeneratorTarget->GetPDBDirectory(config.c_str());
     pdb += "/";
     pdb += targetNamePDB;

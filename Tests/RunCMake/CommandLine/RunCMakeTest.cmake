@@ -101,6 +101,60 @@ if(UNIX)
     )
 endif()
 
+set(in ${RunCMake_SOURCE_DIR}/copy_input)
+set(out ${RunCMake_BINARY_DIR}/copy_output)
+file(REMOVE_RECURSE "${out}")
+file(MAKE_DIRECTORY ${out})
+run_cmake_command(E_copy-one-source-file
+  ${CMAKE_COMMAND} -E copy ${out}/f1.txt)
+run_cmake_command(E_copy-one-source-directory-target-is-directory
+  ${CMAKE_COMMAND} -E copy ${in}/f1.txt ${out})
+run_cmake_command(E_copy-three-source-files-target-is-directory
+  ${CMAKE_COMMAND} -E copy ${in}/f1.txt ${in}/f2.txt ${in}/f3.txt ${out})
+run_cmake_command(E_copy-three-source-files-target-is-file
+  ${CMAKE_COMMAND} -E copy ${in}/f1.txt ${in}/f2.txt ${in}/f3.txt ${out}/f1.txt)
+run_cmake_command(E_copy-two-good-and-one-bad-source-files-target-is-directory
+  ${CMAKE_COMMAND} -E copy ${in}/f1.txt ${in}/not_existing_file.bad ${in}/f3.txt ${out})
+run_cmake_command(E_copy_if_different-one-source-directory-target-is-directory
+  ${CMAKE_COMMAND} -E copy_if_different ${in}/f1.txt ${out})
+run_cmake_command(E_copy_if_different-three-source-files-target-is-directory
+  ${CMAKE_COMMAND} -E copy_if_different ${in}/f1.txt ${in}/f2.txt ${in}/f3.txt ${out})
+run_cmake_command(E_copy_if_different-three-source-files-target-is-file
+  ${CMAKE_COMMAND} -E copy_if_different ${in}/f1.txt ${in}/f2.txt ${in}/f3.txt ${out}/f1.txt)
+unset(in)
+unset(out)
+
+set(in ${RunCMake_SOURCE_DIR}/copy_input)
+set(out ${RunCMake_BINARY_DIR}/copy_directory_output)
+set(outfile ${out}/file_for_test.txt)
+file(REMOVE_RECURSE "${out}")
+file(MAKE_DIRECTORY ${out})
+file(WRITE ${outfile} "")
+run_cmake_command(E_copy_directory-three-source-files-target-is-directory
+  ${CMAKE_COMMAND} -E copy_directory ${in}/d1 ${in}/d2 ${in}/d3 ${out})
+run_cmake_command(E_copy_directory-three-source-files-target-is-file
+  ${CMAKE_COMMAND} -E copy_directory ${in}/d1 ${in}/d2 ${in}/d3 ${outfile})
+run_cmake_command(E_copy_directory-three-source-files-target-is-not-exist
+  ${CMAKE_COMMAND} -E copy_directory ${in}/d1 ${in}/d2 ${in}/d3 ${out}/not_existing_directory)
+unset(in)
+unset(out)
+unset(outfile)
+
+set(out ${RunCMake_BINARY_DIR}/make_directory_output)
+set(outfile ${out}/file_for_test.txt)
+file(REMOVE_RECURSE "${out}")
+file(MAKE_DIRECTORY ${out})
+file(WRITE ${outfile} "")
+run_cmake_command(E_make_directory-three-directories
+  ${CMAKE_COMMAND} -E make_directory ${out}/d1 ${out}/d2 ${out}/d2)
+run_cmake_command(E_make_directory-directory-with-parent
+  ${CMAKE_COMMAND} -E make_directory ${out}/parent/child)
+run_cmake_command(E_make_directory-three-directories-and-file
+  ${CMAKE_COMMAND} -E make_directory ${out}/d1 ${out}/d2 ${outfile})
+unset(out)
+unset(outfile)
+
+
 run_cmake_command(E_env-no-command0 ${CMAKE_COMMAND} -E env)
 run_cmake_command(E_env-no-command1 ${CMAKE_COMMAND} -E env TEST_ENV=1)
 run_cmake_command(E_env-bad-arg1 ${CMAKE_COMMAND} -E env -bad-arg1)
@@ -133,6 +187,14 @@ set(RunCMake_TEST_OPTIONS -Wdev)
 run_cmake(Wdev)
 unset(RunCMake_TEST_OPTIONS)
 
+set(RunCMake_TEST_OPTIONS -Werror=dev)
+run_cmake(Werror_dev)
+unset(RunCMake_TEST_OPTIONS)
+
+set(RunCMake_TEST_OPTIONS -Wno-error=dev)
+run_cmake(Wno-error_deprecated)
+unset(RunCMake_TEST_OPTIONS)
+
 # -Wdev should not override deprecated options if specified
 set(RunCMake_TEST_OPTIONS -Wdev -Wno-deprecated)
 run_cmake(Wno-deprecated)
@@ -146,12 +208,25 @@ set(RunCMake_TEST_OPTIONS -Wdev)
 run_cmake(Wdeprecated)
 unset(RunCMake_TEST_OPTIONS)
 
+# -Werror=dev should enable deprecated errors as well
+set(RunCMake_TEST_OPTIONS -Werror=dev)
+run_cmake(Werror_deprecated)
+unset(RunCMake_TEST_OPTIONS)
+
 set(RunCMake_TEST_OPTIONS -Wdeprecated)
 run_cmake(Wdeprecated)
 unset(RunCMake_TEST_OPTIONS)
 
 set(RunCMake_TEST_OPTIONS -Wno-deprecated)
 run_cmake(Wno-deprecated)
+unset(RunCMake_TEST_OPTIONS)
+
+set(RunCMake_TEST_OPTIONS -Werror=deprecated)
+run_cmake(Werror_deprecated)
+unset(RunCMake_TEST_OPTIONS)
+
+set(RunCMake_TEST_OPTIONS -Wno-error=deprecated)
+run_cmake(Wno-error_deprecated)
 unset(RunCMake_TEST_OPTIONS)
 
 # Dev warnings should be on by default
@@ -170,6 +245,7 @@ unset(RunCMake_TEST_OPTIONS)
 
 run_cmake_command(W_bad-arg1 ${CMAKE_COMMAND} -W)
 run_cmake_command(W_bad-arg2 ${CMAKE_COMMAND} -Wno-)
+run_cmake_command(W_bad-arg3 ${CMAKE_COMMAND} -Werror=)
 
 set(RunCMake_TEST_OPTIONS --debug-output)
 run_cmake(debug-output)

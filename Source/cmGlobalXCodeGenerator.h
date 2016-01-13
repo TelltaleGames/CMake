@@ -99,7 +99,6 @@ private:
   std::string XCodeEscapePath(const char* p);
   std::string RelativeToSource(const char* p);
   std::string RelativeToBinary(const char* p);
-  std::string ConvertToRelativeForXCode(const char* p);
   std::string ConvertToRelativeForMake(const char* p);
   void CreateCustomCommands(cmXCodeObject* buildPhases,
                             cmXCodeObject* sourceBuildPhase,
@@ -131,6 +130,7 @@ private:
   cmXCodeObject* CreateObject(cmXCodeObject::Type type);
   cmXCodeObject* CreateString(const std::string& s);
   cmXCodeObject* CreateObjectReference(cmXCodeObject*);
+  cmXCodeObject* CreateFlatClone(cmXCodeObject*);
   cmXCodeObject* CreateXCodeTarget(cmGeneratorTarget *gtgt,
                                    cmXCodeObject* buildPhases);
   void ForceLinkerLanguages();
@@ -153,6 +153,8 @@ private:
   std::string ExtractFlag(const char* flag, std::string& flags);
   std::string ExtractFlagRegex(const char* exp, int matchIndex,
                                std::string& flags);
+  void FilterConfigurationAttribute(std::string const& configName,
+                                    std::string& attribute);
   void SortXCodeObjects();
   // delete all objects in the this->XCodeObjects vector.
   void ClearXCodeObjects();

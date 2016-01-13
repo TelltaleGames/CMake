@@ -167,16 +167,23 @@ Available commands are:
   Change the current working directory and run a command.
 
 ``compare_files <file1> <file2>``
-  Check if file1 is same as file2.
+  Check if ``<file1>`` is same as ``<file2>``. If files are the same,
+  then returns 0, if not itreturns 1.
 
-``copy <file> <destination>``
-  Copy file to destination (either file or directory).
+``copy <file>... <destination>``
+  Copy files to ``<destination>`` (either file or directory).
+  If multiple files are specified, the ``<destination>`` must be
+  directory and it must exist.
 
-``copy_directory <source> <destination>``
-  Copy directory 'source' content to directory 'destination'.
+``copy_directory <dir>... <destination>``
+  Copy directories to ``<destination>`` directory.
+  If ``<destination>`` directory does not exist it will be created.
 
-``copy_if_different <in-file> <out-file>``
-  Copy file if input has changed.
+``copy_if_different <file>... <destination>``
+  Copy files to ``<destination>`` (either file or directory) if
+  they have changed.
+  If multiple files are specified, the ``<destination>`` must be
+  directory and it must exist.
 
 ``echo [<string>...]``
   Displays arguments as text.
@@ -188,15 +195,16 @@ Available commands are:
   Run command in a modified environment.
 
 ``environment``
-  Display the current environment.
+  Display the current environment variables.
 
-``make_directory <dir>``
-  Create a directory.
+``make_directory <dir>...``
+  Create ``<dir>`` directories.  If necessary, create parent
+  directories too.
 
-``md5sum [<file>...]``
+``md5sum <file>...``
   Compute md5sum of files.
 
-``remove [-f] [<file>...]``
+``remove [-f] <file>...``
   Remove the file(s), use ``-f`` to force it.
 
 ``remove_directory <dir>``
