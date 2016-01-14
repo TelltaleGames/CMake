@@ -1,2 +1,2 @@
-include(Platform/PS3-GNU)
+include(Platform/PSVita-GNU)
 __psvita_compiler_gnu(CXX)
