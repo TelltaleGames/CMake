@@ -66,6 +66,10 @@ public:
       {
         return new cmGlobalVisualStudio14Generator(cm, genName, "ORBIS");
       }
+	  if( strcmp( p, "WiiU" ) == 0 )
+	  {
+		  return new cmGlobalVisualStudio14Generator( cm, genName, "Cafe" );
+	  }
       return 0;
   }
 
@@ -85,6 +89,7 @@ public:
       names.push_back(vs14generatorName + std::string(" Win64"));
   	  names.push_back(vs14generatorName + std::string(" XBOne"));
       names.push_back(vs14generatorName + std::string(" PS4"));
+	  names.push_back(vs14generatorName + std::string(" WiiU"));
     }
 
   virtual bool SupportsToolset() const { return true; }
