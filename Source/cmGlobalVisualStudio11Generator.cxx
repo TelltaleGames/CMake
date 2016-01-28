@@ -68,7 +68,7 @@ public:
 	  }
     if(strcmp(p, "PSVita") == 0)
       {
-      return new cmGlobalVisualStudio10Generator(cm, genName, "PSVita");
+      return new cmGlobalVisualStudio11Generator(cm, genName, "PSVita");
       }
 	if(strcmp(p, "PS4") == 0)
 	{
