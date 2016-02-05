@@ -492,6 +492,28 @@ void cmVisualStudio10TargetGenerator::Generate()
                              << "</" << globalKey << ">\n";
     }
 
+    // --------------------------------------------------------------------------------------------
+    //
+    // mv: support VS_GLOBAL_<var> across ALL targets
+    //
+    if (this->Makefile->GetState())
+      {
+          const cmPropertyMap& globalProps = this->Makefile->GetState()->GetGlobalProperties();
+          for (cmPropertyMap::const_iterator i = globalProps.begin(); i != globalProps.end(); ++i)
+          {
+              if (i->first.find("VS_GLOBAL_") == 0)
+              {
+                  std::string name = i->first.substr(10);
+                  if (name != "")
+                  {
+                      this->WriteString((std::string("<") + name + std::string(">")).c_str(), 2);
+                      (*this->BuildFileStream) << cmVS10EscapeXML(i->second.GetValue()) << "</" << name << ">\n";
+                  }
+              }
+          }
+      }
+   // --------------------------------------------------------------------------------------------
+
   this->WriteString("</PropertyGroup>\n", 1);
   this->WriteString("<Import Project="
                     "\"$(VCTargetsPath)\\Microsoft.Cpp.Default.props\" />\n",
@@ -681,7 +703,7 @@ void cmVisualStudio10TargetGenerator::WriteExtensionTargets()
     }
 
     std::vector<std::string> extensions;
-    if (const char* vsExtensions = this->Target->GetProperty("VS_EXTENSION_TARGETS"))
+    if (const char* vsExtensions = this->GeneratorTarget->GetProperty("VS_EXTENSION_TARGETS"))
     {
         cmSystemTools::ExpandListArgument(vsExtensions, extensions);
     }
