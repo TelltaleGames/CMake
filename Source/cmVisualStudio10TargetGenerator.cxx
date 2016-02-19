@@ -518,6 +518,15 @@ void cmVisualStudio10TargetGenerator::Generate()
   this->WriteString("<Import Project="
                     "\"$(VCTargetsPath)\\Microsoft.Cpp.Default.props\" />\n",
                     1);
+
+  // always prefer x64 tool chain when option available (VS2013 and later)
+  if ( this->GlobalGenerator->GetVersion() >= cmGlobalVisualStudioGenerator::VS12 )
+  {
+      this->WriteString("<PropertyGroup>\n", 1);
+      this->WriteString("<PreferredToolArchitecture>x64</PreferredToolArchitecture>\n", 2);
+      this->WriteString("</PropertyGroup>\n", 1);
+  }
+
   this->WriteProjectConfigurationValues();
   this->WriteString(
     "<Import Project=\"$(VCTargetsPath)\\Microsoft.Cpp.props\" />\n", 1);
