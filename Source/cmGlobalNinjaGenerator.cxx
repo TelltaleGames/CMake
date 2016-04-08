@@ -230,9 +230,10 @@ void cmGlobalNinjaGenerator::WriteBuild(std::ostream& os,
   std::string assignments = variable_assignments.str();
   const std::string& args = arguments;
   bool useResponseFile = false;
-  if (cmdLineLimit > 0
-      && args.size() + buildstr.size() + assignments.size()
-                                                    > (size_t) cmdLineLimit) {
+  if (cmdLineLimit < 0 ||
+      (cmdLineLimit > 0 &&
+       (args.size() + buildstr.size() + assignments.size())
+       > static_cast<size_t>(cmdLineLimit))) {
     variable_assignments.str(std::string());
     cmGlobalNinjaGenerator::WriteVariable(variable_assignments,
                                           "RSP_FILE", rspfile, "", 1);
@@ -577,6 +578,7 @@ void cmGlobalNinjaGenerator::Generate()
 
   this->WriteAssumedSourceDependencies();
   this->WriteTargetAliases(*this->BuildFileStream);
+  this->WriteFolderTargets(*this->BuildFileStream);
   this->WriteUnknownExplicitDependencies(*this->BuildFileStream);
   this->WriteBuiltinTargets(*this->BuildFileStream);
 
@@ -642,7 +644,6 @@ void cmGlobalNinjaGenerator
 //   cmGlobalUnixMakefileGenerator3
 //   cmGlobalGhsMultiGenerator
 //   cmGlobalVisualStudio10Generator
-//   cmGlobalVisualStudio6Generator
 //   cmGlobalVisualStudio7Generator
 //   cmGlobalXCodeGenerator
 // Called by:
@@ -849,6 +850,18 @@ std::string cmGlobalNinjaGenerator::ConvertToNinjaPath(const std::string& path)
   return convPath;
 }
 
+std::string
+cmGlobalNinjaGenerator::ConvertToNinjaFolderRule(const std::string& path)
+{
+  cmLocalNinjaGenerator *ng =
+    static_cast<cmLocalNinjaGenerator *>(this->LocalGenerators[0]);
+  std::string convPath = ng->Convert(path+"/all", cmOutputConverter::HOME);
+#ifdef _WIN32
+  cmSystemTools::ReplaceString(convPath, "/", "\\");
+#endif
+  return convPath;
+}
+
 void cmGlobalNinjaGenerator::AddCXXCompileCommand(
                                       const std::string &commandLine,
                                       const std::string &sourceFile)
@@ -991,6 +1004,7 @@ cmGlobalNinjaGenerator
     std::set<std::string> const& utils = target->GetUtilities();
     std::copy(utils.begin(), utils.end(), std::back_inserter(outputs));
   } else {
+    cmNinjaDeps outs;
     cmTargetDependSet const& targetDeps = this->GetTargetDirectDepends(target);
     for (cmTargetDependSet::const_iterator i = targetDeps.begin();
          i != targetDeps.end(); ++i)
@@ -999,8 +1013,10 @@ cmGlobalNinjaGenerator
         {
         continue;
         }
-      this->AppendTargetOutputs(*i, outputs);
+      this->AppendTargetOutputs(*i, outs);
     }
+    std::sort(outs.begin(), outs.end());
+    outputs.insert(outputs.end(), outs.begin(), outs.end());
   }
 }
 
@@ -1040,6 +1056,75 @@ void cmGlobalNinjaGenerator::WriteTargetAliases(std::ostream& os)
                           cmNinjaDeps(1, i->first),
                           deps);
   }
+}
+
+void cmGlobalNinjaGenerator::WriteFolderTargets(std::ostream& os)
+{
+  cmGlobalNinjaGenerator::WriteDivider(os);
+  os << "# Folder targets.\n\n";
+
+  std::map<std::string, cmNinjaDeps> targetsPerFolder;
+  for (std::vector<cmLocalGenerator *>::const_iterator
+       lgi = this->LocalGenerators.begin();
+       lgi != this->LocalGenerators.end(); ++lgi)
+    {
+    cmLocalGenerator const* lg = *lgi;
+    const std::string currentSourceFolder(
+      lg->GetStateSnapshot().GetDirectory().GetCurrentSource());
+    // The directory-level rule should depend on the target-level rules
+    // for all targets in the directory.
+    targetsPerFolder[currentSourceFolder] = cmNinjaDeps();
+    for (std::vector<cmGeneratorTarget*>::const_iterator
+         ti = lg->GetGeneratorTargets().begin();
+         ti != lg->GetGeneratorTargets().end(); ++ti)
+      {
+      cmGeneratorTarget const* gt = *ti;
+      cmState::TargetType const type = gt->GetType();
+      if((type == cmState::EXECUTABLE ||
+          type == cmState::STATIC_LIBRARY ||
+          type == cmState::SHARED_LIBRARY ||
+          type == cmState::MODULE_LIBRARY ||
+          type == cmState::OBJECT_LIBRARY ||
+          type == cmState::UTILITY) &&
+         !gt->GetPropertyAsBool("EXCLUDE_FROM_ALL"))
+        {
+        targetsPerFolder[currentSourceFolder].push_back(gt->GetName());
+        }
+      }
+
+    // The directory-level rule should depend on the directory-level
+    // rules of the subdirectories.
+    std::vector<cmState::Snapshot> const& children =
+      lg->GetStateSnapshot().GetChildren();
+    for(std::vector<cmState::Snapshot>::const_iterator
+        stateIt = children.begin(); stateIt != children.end(); ++stateIt)
+      {
+      targetsPerFolder[currentSourceFolder].push_back(
+        this->ConvertToNinjaFolderRule(
+          stateIt->GetDirectory().GetCurrentSource()));
+      }
+    }
+
+  std::string const rootSourceDir =
+    this->LocalGenerators[0]->GetSourceDirectory();
+  for (std::map<std::string, cmNinjaDeps >::const_iterator it =
+       targetsPerFolder.begin(); it != targetsPerFolder.end(); ++it)
+    {
+    cmGlobalNinjaGenerator::WriteDivider( os );
+    std::string const& currentSourceDir = it->first;
+
+    // Do not generate a rule for the root source dir.
+    if (rootSourceDir.length() >= currentSourceDir.length())
+      {
+      continue;
+      }
+
+    std::string const comment = "Folder: " + currentSourceDir;
+    cmNinjaDeps output(1);
+    output.push_back(this->ConvertToNinjaFolderRule(currentSourceDir));
+
+    this->WritePhonyBuild(os, comment, output, it->second);
+    }
 }
 
 void cmGlobalNinjaGenerator::WriteUnknownExplicitDependencies(std::ostream& os)

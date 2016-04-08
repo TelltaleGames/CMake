@@ -241,11 +241,6 @@ public:
    */
   virtual void FindMakeProgram(cmMakefile*);
 
-#if defined(_WIN32) && !defined(__CYGWIN__)
-  /** Is this the Visual Studio 6 generator?  */
-  bool IsForVS6() const { return this->GetName() == "Visual Studio 6"; }
-#endif
-
   ///! Find a target by name by searching the local generators.
   cmTarget* FindTarget(const std::string& name,
                        bool excludeAliases = false) const;
@@ -277,6 +272,9 @@ public:
       they do not yet exist.  */
   std::set<std::string> const& GetDirectoryContent(std::string const& dir,
                                                    bool needDisk = true);
+
+  void IndexTarget(cmTarget* t);
+  void IndexGeneratorTarget(cmGeneratorTarget* gt);
 
   static bool IsReservedTarget(std::string const& name);
 
@@ -420,7 +418,6 @@ protected:
   std::map<std::string, std::string> AliasTargets;
 
   cmTarget* FindTargetImpl(std::string const& name) const;
-  cmTarget* FindImportedTargetImpl(std::string const& name) const;
 
   cmGeneratorTarget* FindGeneratorTargetImpl(std::string const& name) const;
   cmGeneratorTarget*
@@ -430,11 +427,32 @@ protected:
   virtual bool UseFolderProperty();
 
 private:
+
+#if defined(CMAKE_BUILD_WITH_CMAKE)
+# ifdef CMake_HAVE_CXX11_UNORDERED_MAP
+  typedef std::unordered_map<std::string, cmTarget*> TargetMap;
+  typedef std::unordered_map<std::string, cmGeneratorTarget*>
+    GeneratorTargetMap;
+# else
+  typedef cmsys::hash_map<std::string, cmTarget*> TargetMap;
+  typedef cmsys::hash_map<std::string, cmGeneratorTarget*> GeneratorTargetMap;
+# endif
+#else
+  typedef std::map<std::string,cmTarget *> TargetMap;
+  typedef std::map<std::string,cmGeneratorTarget *> GeneratorTargetMap;
+#endif
+  // Map efficiently from target name to cmTarget instance.
+  // Do not use this structure for looping over all targets.
+  // It contains both normal and globally visible imported targets.
+  TargetMap TargetSearchIndex;
+  GeneratorTargetMap GeneratorTargetSearchIndex;
+
   cmMakefile* TryCompileOuterMakefile;
   // If you add a new map here, make sure it is copied
   // in EnableLanguagesFromGenerator
   std::map<std::string, bool> IgnoreExtensions;
   std::set<std::string> LanguagesReady; // Ready for try_compile
+  std::set<std::string> LanguagesInProgress;
   std::map<std::string, std::string> OutputExtensions;
   std::map<std::string, std::string> LanguageToOutputExtension;
   std::map<std::string, std::string> ExtensionToLanguage;

@@ -238,8 +238,8 @@ macro(_pkg_check_modules_internal _is_required _is_silent _no_cmake_path _no_cma
     if(NOT "${_extra_paths}" STREQUAL "")
       # Save the PKG_CONFIG_PATH environment variable, and add paths
       # from the CMAKE_PREFIX_PATH variables
-      set(_pkgconfig_path_old $ENV{PKG_CONFIG_PATH})
-      set(_pkgconfig_path ${_pkgconfig_path_old})
+      set(_pkgconfig_path_old "$ENV{PKG_CONFIG_PATH}")
+      set(_pkgconfig_path "${_pkgconfig_path_old}")
       if(NOT "${_pkgconfig_path}" STREQUAL "")
         file(TO_CMAKE_PATH "${_pkgconfig_path}" _pkgconfig_path)
       endif()
@@ -285,7 +285,7 @@ macro(_pkg_check_modules_internal _is_required _is_silent _no_cmake_path _no_cma
           string(REPLACE ";" ":" _pkgconfig_path "${_pkgconfig_path}")
           string(REPLACE "\\ " " " _pkgconfig_path "${_pkgconfig_path}")
         endif()
-        set(ENV{PKG_CONFIG_PATH} ${_pkgconfig_path})
+        set(ENV{PKG_CONFIG_PATH} "${_pkgconfig_path}")
       endif()
 
       # Unset variables
@@ -382,6 +382,9 @@ macro(_pkg_check_modules_internal _is_required _is_silent _no_cmake_path _no_cma
         pkg_get_variable("${_pkg_check_prefix}_PREFIX" ${_pkg_check_modules_pkg} "prefix")
         pkg_get_variable("${_pkg_check_prefix}_INCLUDEDIR" ${_pkg_check_modules_pkg} "includedir")
         pkg_get_variable("${_pkg_check_prefix}_LIBDIR" ${_pkg_check_modules_pkg} "libdir")
+        foreach (variable IN ITEMS PREFIX INCLUDEDIR LIBDIR)
+          _pkgconfig_set("${_pkg_check_prefix}_${variable}" "${${_pkg_check_prefix}_${variable}}")
+        endforeach ()
 
         if (NOT ${_is_silent})
           message(STATUS "  Found ${_pkg_check_modules_pkg}, version ${_pkgconfig_VERSION}")
@@ -401,7 +404,7 @@ macro(_pkg_check_modules_internal _is_required _is_silent _no_cmake_path _no_cma
 
     if(NOT "${_extra_paths}" STREQUAL "")
       # Restore the environment variable
-      set(ENV{PKG_CONFIG_PATH} ${_pkgconfig_path})
+      set(ENV{PKG_CONFIG_PATH} "${_pkgconfig_path_old}")
     endif()
 
     unset(_extra_paths)

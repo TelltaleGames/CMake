@@ -733,26 +733,6 @@ void cmMakefile::ConfigureFinalPass()
       "with CMake 2.4 or later. For compatibility with older versions please "
       "use any CMake 2.8.x release or lower.");
     }
-#if defined(_WIN32) && !defined(__CYGWIN__)
-  // Do old-style link dependency analysis only for CM_USE_OLD_VS6.
-  if(this->GetGlobalGenerator()->IsForVS6())
-    {
-    for (cmTargets::iterator l = this->Targets.begin();
-         l != this->Targets.end(); l++)
-      {
-      if (l->second.GetType() == cmState::INTERFACE_LIBRARY)
-        {
-        continue;
-        }
-      // Erase any cached link information that might have been comptued
-      // on-demand during the configuration.  This ensures that build
-      // system generation uses up-to-date information even if other cache
-      // invalidation code in this source file is buggy.
-
-      l->second.AnalyzeLibDependenciesForVS6(*this);
-      }
-    }
-#endif
 }
 
 //----------------------------------------------------------------------------
@@ -791,7 +771,24 @@ cmMakefile::AddCustomCommandToTarget(const std::string& target,
 
     if(issueMessage)
       {
-      e << "The target name \"" << target << "\" is unknown in this context.";
+      if (cmTarget const* t = this->FindTargetToUse(target))
+        {
+        if (t->IsImported())
+          {
+          e << "TARGET '" << target
+            << "' is IMPORTED and does not build here.";
+          }
+        else
+          {
+          e << "TARGET '" << target
+            << "' was not created in this directory.";
+          }
+        }
+      else
+        {
+        e << "No TARGET '" << target
+          << "' has been created in this directory.";
+        }
       IssueMessage(messageType, e.str());
       }
 
@@ -1313,14 +1310,6 @@ bool cmMakefile::ParseDefineFlag(std::string const& def, bool remove)
 
   // Make sure the definition matches.
   if(!valid.find(def.c_str()))
-    {
-    return false;
-    }
-
-  // VS6 IDE does not support definition values with spaces in
-  // combination with '"', '$', or ';'.
-  if((this->GetGlobalGenerator()->GetName() == "Visual Studio 6") &&
-     (def.find(" ") != def.npos && def.find_first_of("\"$;") != def.npos))
     {
     return false;
     }
@@ -2111,6 +2100,7 @@ cmMakefile::AddNewTarget(cmState::TargetType type, const std::string& name)
   cmTarget& target = it->second;
   target.SetType(type, name);
   target.SetMakefile(this);
+  this->GetGlobalGenerator()->IndexTarget(&it->second);
   return &it->second;
 }
 
@@ -2513,15 +2503,22 @@ const char* cmMakefile::GetDefinition(const std::string& name) const
   cmVariableWatch* vv = this->GetVariableWatch();
   if ( vv && !this->SuppressWatches )
     {
-    if ( def )
-      {
-      vv->VariableAccessed(name, cmVariableWatch::VARIABLE_READ_ACCESS,
-        def, this);
-      }
-    else
-      {
+    bool const watch_function_executed =
       vv->VariableAccessed(name,
-          cmVariableWatch::UNKNOWN_VARIABLE_READ_ACCESS, def, this);
+                           def ? cmVariableWatch::VARIABLE_READ_ACCESS
+                           : cmVariableWatch::UNKNOWN_VARIABLE_READ_ACCESS,
+                           def, this);
+
+    if (watch_function_executed)
+      {
+      // A callback was executed and may have caused re-allocation of the
+      // variable storage.  Look it up again for now.
+      // FIXME: Refactor variable storage to avoid this problem.
+      def = this->StateSnapshot.GetDefinition(name);
+      if(!def)
+        {
+        def = this->GetState()->GetInitializedCacheValue(name);
+        }
       }
     }
 #endif
@@ -2832,10 +2829,9 @@ cmake::MessageType cmMakefile::ExpandVariablesInStringNew(
   const char* last = in;
   std::string result;
   result.reserve(source.size());
-  std::stack<t_lookup> openstack;
+  std::vector<t_lookup> openstack;
   bool error = false;
   bool done = false;
-  openstack.push(t_lookup());
   cmake::MessageType mtype = cmake::LOG;
 
   cmState* state = this->GetCMakeInstance()->GetState();
@@ -2846,10 +2842,10 @@ cmake::MessageType cmMakefile::ExpandVariablesInStringNew(
     switch(inc)
       {
       case '}':
-        if(openstack.size() > 1)
+        if(!openstack.empty())
           {
-          t_lookup var = openstack.top();
-          openstack.pop();
+          t_lookup var = openstack.back();
+          openstack.pop_back();
           result.append(last, in - last);
           std::string const& lookup = result.substr(var.loc);
           const char* value = NULL;
@@ -2970,7 +2966,7 @@ cmake::MessageType cmMakefile::ExpandVariablesInStringNew(
             last = start;
             in = start - 1;
             lookup.loc = result.size();
-            openstack.push(lookup);
+            openstack.push_back(lookup);
             }
           break;
           }
@@ -2997,7 +2993,7 @@ cmake::MessageType cmMakefile::ExpandVariablesInStringNew(
             result.append("\r");
             last = next + 1;
             }
-          else if(nextc == ';' && openstack.size() == 1)
+          else if(nextc == ';' && openstack.empty())
             {
             // Handled in ExpandListArgument; pass the backslash literally.
             }
@@ -3065,7 +3061,7 @@ cmake::MessageType cmMakefile::ExpandVariablesInStringNew(
         /* FALLTHROUGH */
       default:
         {
-        if(openstack.size() > 1 &&
+        if(!openstack.empty() &&
            !(isalnum(inc) || inc == '_' ||
              inc == '/' || inc == '.' ||
              inc == '+' || inc == '-'))
@@ -3074,7 +3070,7 @@ cmake::MessageType cmMakefile::ExpandVariablesInStringNew(
           errorstr += inc;
           result.append(last, in - last);
           errorstr += "\') in a variable name: "
-                      "'" + result.substr(openstack.top().loc) + "'";
+                      "'" + result.substr(openstack.back().loc) + "'";
           mtype = cmake::FATAL_ERROR;
           error = true;
           }
@@ -3085,7 +3081,7 @@ cmake::MessageType cmMakefile::ExpandVariablesInStringNew(
     } while(!error && !done && *++in);
 
   // Check for open variable references yet.
-  if(!error && openstack.size() != 1)
+  if(!error && !openstack.empty())
     {
     // There's an open variable reference waiting.  Policy CMP0010 flags
     // whether this is an error or not.  The new parser now enforces
@@ -3749,17 +3745,13 @@ std::string cmMakefile::GetModulesFile(const char* filename) const
     }
 
   // Always search in the standard modules location.
-  const char* cmakeRoot = this->GetDefinition("CMAKE_ROOT");
-  if(cmakeRoot)
+  moduleInCMakeRoot = cmSystemTools::GetCMakeRoot();
+  moduleInCMakeRoot += "/Modules/";
+  moduleInCMakeRoot += filename;
+  cmSystemTools::ConvertToUnixSlashes(moduleInCMakeRoot);
+  if(!cmSystemTools::FileExists(moduleInCMakeRoot.c_str()))
     {
-    moduleInCMakeRoot = cmakeRoot;
-    moduleInCMakeRoot += "/Modules/";
-    moduleInCMakeRoot += filename;
-    cmSystemTools::ConvertToUnixSlashes(moduleInCMakeRoot);
-    if(!cmSystemTools::FileExists(moduleInCMakeRoot.c_str()))
-      {
-      moduleInCMakeRoot = "";
-      }
+    moduleInCMakeRoot = "";
     }
 
   // Normally, prefer the files found in CMAKE_MODULE_PATH. Only when the file
@@ -3774,7 +3766,7 @@ std::string cmMakefile::GetModulesFile(const char* filename) const
   if (!moduleInCMakeModulePath.empty() && !moduleInCMakeRoot.empty())
     {
     const char* currentFile = this->GetDefinition("CMAKE_CURRENT_LIST_FILE");
-    std::string mods = cmakeRoot + std::string("/Modules/");
+    std::string mods = cmSystemTools::GetCMakeRoot() + "/Modules/";
     if (currentFile && strncmp(currentFile, mods.c_str(), mods.size()) == 0)
       {
       switch (this->GetPolicyStatus(cmPolicies::CMP0017))
@@ -4034,25 +4026,13 @@ std::vector<std::string> cmMakefile::GetPropertyKeys() const
   return this->StateSnapshot.GetDirectory().GetPropertyKeys();
 }
 
-cmTarget* cmMakefile::FindTarget(const std::string& name,
-                                 bool excludeAliases) const
+cmTarget* cmMakefile::FindLocalNonAliasTarget(const std::string& name) const
 {
-  if (!excludeAliases)
-    {
-    std::map<std::string, std::string>::const_iterator i =
-        this->AliasTargets.find(name);
-    if (i != this->AliasTargets.end())
-      {
-      cmTargets::iterator ai = this->Targets.find(i->second);
-      return &ai->second;
-      }
-    }
   cmTargets::iterator i = this->Targets.find( name );
   if ( i != this->Targets.end() )
     {
     return &i->second;
     }
-
   return 0;
 }
 
@@ -4202,6 +4182,7 @@ cmMakefile::AddImportedTarget(const std::string& name,
 
   // Add to the set of available imported targets.
   this->ImportedTargets[name] = target.get();
+  this->GetGlobalGenerator()->IndexTarget(target.get());
 
   // Transfer ownership to this cmMakefile object.
   this->ImportedTargetsOwned.push_back(target.get());
@@ -4222,7 +4203,7 @@ cmTarget* cmMakefile::FindTargetToUse(const std::string& name,
     }
 
   // Look for a target built in this directory.
-  if(cmTarget* t = this->FindTarget(name, excludeAliases))
+  if(cmTarget* t = this->FindLocalNonAliasTarget(name))
     {
     return t;
     }

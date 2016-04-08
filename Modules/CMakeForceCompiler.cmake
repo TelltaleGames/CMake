@@ -12,6 +12,12 @@
 # CMake detects from a compiler is now too extensive to be provided by
 # toolchain files using these macros.
 #
+# One common use case for this module was to skip CMake's checks for a
+# working compiler when using a cross-compiler that cannot link binaries
+# without special flags or custom linker scripts.  This case is now supported
+# by setting the :variable:`CMAKE_TRY_COMPILE_TARGET_TYPE` variable in the
+# toolchain file instead.
+#
 # -------------------------------------------------------------------------
 #
 # Macro CMAKE_FORCE_C_COMPILER has the following signature:

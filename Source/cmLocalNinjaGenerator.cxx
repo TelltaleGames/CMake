@@ -400,7 +400,7 @@ cmLocalNinjaGenerator::WriteCustomCommandBuildStatement(
 
   bool symbolic = false;
   for (std::vector<std::string>::const_iterator o = outputs.begin();
-       o != outputs.end(); ++o)
+       !symbolic && o != outputs.end(); ++o)
     {
     if (cmSourceFile* sf = this->Makefile->GetSource(*o))
       {
@@ -444,7 +444,7 @@ cmLocalNinjaGenerator::WriteCustomCommandBuildStatement(
       this->ConstructComment(ccg),
       "Custom command for " + ninjaOutputs[0],
       cc->GetUsesTerminal(),
-      /*restat*/!symbolic,
+      /*restat*/!symbolic || !byproducts.empty(),
       ninjaOutputs,
       ninjaDeps,
       orderOnlyDeps);
@@ -454,13 +454,24 @@ cmLocalNinjaGenerator::WriteCustomCommandBuildStatement(
 void cmLocalNinjaGenerator::AddCustomCommandTarget(cmCustomCommand const* cc,
                                                    cmGeneratorTarget* target)
 {
-  this->CustomCommandTargets[cc].insert(target);
+  CustomCommandTargetMap::value_type v(cc, std::set<cmGeneratorTarget*>());
+  std::pair<CustomCommandTargetMap::iterator, bool>
+    ins = this->CustomCommandTargets.insert(v);
+  if (ins.second)
+    {
+    this->CustomCommands.push_back(cc);
+    }
+  ins.first->second.insert(target);
 }
 
 void cmLocalNinjaGenerator::WriteCustomCommandBuildStatements()
 {
-  for (CustomCommandTargetMap::iterator i = this->CustomCommandTargets.begin();
-       i != this->CustomCommandTargets.end(); ++i) {
+  for (std::vector<cmCustomCommand const*>::iterator vi =
+       this->CustomCommands.begin(); vi != this->CustomCommands.end(); ++vi)
+    {
+    CustomCommandTargetMap::iterator i = this->CustomCommandTargets.find(*vi);
+    assert(i != this->CustomCommandTargets.end());
+
     // A custom command may appear on multiple targets.  However, some build
     // systems exist where the target dependencies on some of the targets are
     // overspecified, leading to a dependency cycle.  If we assume all target

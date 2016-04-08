@@ -12,6 +12,9 @@ run_cmake_command(E_echo_append ${CMAKE_COMMAND} -E echo_append)
 run_cmake_command(E_rename-no-arg ${CMAKE_COMMAND} -E rename)
 run_cmake_command(E_touch_nocreate-no-arg ${CMAKE_COMMAND} -E touch_nocreate)
 
+run_cmake_command(E_time ${CMAKE_COMMAND} -E time ${CMAKE_COMMAND} -E echo "hello  world")
+run_cmake_command(E_time-no-arg ${CMAKE_COMMAND} -E time)
+
 run_cmake_command(E___run_iwyu-no-iwyu ${CMAKE_COMMAND} -E __run_iwyu -- command-does-not-exist)
 run_cmake_command(E___run_iwyu-bad-iwyu ${CMAKE_COMMAND} -E __run_iwyu --iwyu=iwyu-does-not-exist -- command-does-not-exist)
 run_cmake_command(E___run_iwyu-no--- ${CMAKE_COMMAND} -E __run_iwyu --iwyu=iwyu-does-not-exist command-does-not-exist)
@@ -33,6 +36,11 @@ run_cmake_command(build-bad-dir
 run_cmake_command(build-bad-generator
   ${CMAKE_COMMAND} --build ${RunCMake_SOURCE_DIR}/cache-bad-generator)
 
+run_cmake_command(cache-bad-entry
+  ${CMAKE_COMMAND} --build ${RunCMake_SOURCE_DIR}/cache-bad-entry/)
+run_cmake_command(cache-empty-entry
+  ${CMAKE_COMMAND} --build ${RunCMake_SOURCE_DIR}/cache-empty-entry/)
+
 function(run_BuildDir)
   # Use a single build tree for a few tests without cleaning.
   set(RunCMake_TEST_BINARY_DIR ${RunCMake_BINARY_DIR}/BuildDir-build)
@@ -43,6 +51,8 @@ function(run_BuildDir)
   run_cmake(BuildDir)
   run_cmake_command(BuildDir--build ${CMAKE_COMMAND} -E chdir ..
     ${CMAKE_COMMAND} --build BuildDir-build --target CustomTarget)
+  run_cmake_command(BuildDir--build-multiple-targets ${CMAKE_COMMAND} -E chdir ..
+    ${CMAKE_COMMAND} --build BuildDir-build --target CustomTarget2 --target CustomTarget3)
 endfunction()
 run_BuildDir()
 
@@ -62,12 +72,7 @@ if(RunCMake_GENERATOR STREQUAL "Ninja")
   unset(RunCMake_TEST_NO_CLEAN)
 endif()
 
-if(RunCMake_GENERATOR STREQUAL "Visual Studio 6")
-  set(RunCMake_WARN_VS6 1)
-  run_cmake(DeprecateVS6-WARN-ON)
-  unset(RunCMake_WARN_VS6)
-  run_cmake(DeprecateVS6-WARN-OFF)
-elseif(RunCMake_GENERATOR STREQUAL "Visual Studio 7")
+if(RunCMake_GENERATOR STREQUAL "Visual Studio 7")
   set(RunCMake_WARN_VS70 1)
   run_cmake(DeprecateVS70-WARN-ON)
   unset(RunCMake_WARN_VS70)

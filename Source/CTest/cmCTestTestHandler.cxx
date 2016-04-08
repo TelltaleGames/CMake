@@ -609,11 +609,11 @@ int cmCTestTestHandler::ProcessHandler()
         if ( ftit->Status != cmCTestTestHandler::COMPLETED )
           {
           ofs << ftit->TestCount << ":" << ftit->Name << std::endl;
-          cmCTestOptionalLog(this->CTest, HANDLER_OUTPUT, "\t" << std::setw(3)
+          cmCTestLog(this->CTest, HANDLER_OUTPUT, "\t" << std::setw(3)
                      << ftit->TestCount << " - "
                      << ftit->Name << " ("
                      << this->GetTestStatus(ftit->Status) << ")"
-                     << std::endl, this->Quiet);
+                     << std::endl);
           }
         }
       }
@@ -2253,6 +2253,31 @@ bool cmCTestTestHandler::SetTestsProperties(
           if ( key == "WORKING_DIRECTORY" )
             {
             rtit->Directory = val;
+            }
+          if ( key == "TIMEOUT_AFTER_MATCH" )
+            {
+            std::vector<std::string> propArgs;
+            cmSystemTools::ExpandListArgument(val, propArgs);
+            if (propArgs.size() != 2)
+              {
+              cmCTestLog(this->CTest, WARNING,
+                "TIMEOUT_AFTER_MATCH expects two arguments, found " <<
+                propArgs.size() << std::endl);
+              }
+            else
+              {
+              rtit->AlternateTimeout = atof(propArgs[0].c_str());
+              std::vector<std::string> lval;
+              cmSystemTools::ExpandListArgument(propArgs[1], lval);
+              std::vector<std::string>::iterator crit;
+              for ( crit = lval.begin(); crit != lval.end(); ++ crit )
+                {
+                rtit->TimeoutRegularExpressions.push_back(
+                  std::pair<cmsys::RegularExpression, std::string>(
+                    cmsys::RegularExpression(crit->c_str()),
+                    std::string(*crit)));
+                }
+              }
             }
           }
         }

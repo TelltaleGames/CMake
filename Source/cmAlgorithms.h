@@ -52,13 +52,13 @@ template<typename T, size_t N>
 size_t cmArraySize(const T (&)[N]) { return N; }
 
 template<typename T, size_t N>
-bool cmHasLiteralPrefix(T str1, const char (&str2)[N])
+bool cmHasLiteralPrefix(const T& str1, const char (&str2)[N])
 {
   return cmHasLiteralPrefixImpl(str1, str2, N - 1);
 }
 
 template<typename T, size_t N>
-bool cmHasLiteralSuffix(T str1, const char (&str2)[N])
+bool cmHasLiteralSuffix(const T& str1, const char (&str2)[N])
 {
   return cmHasLiteralSuffixImpl(str1, str2, N - 1);
 }
@@ -230,7 +230,7 @@ template<typename Range>
 std::string cmJoin(Range const& r, std::string delimiter)
 {
   return cmJoin(r, delimiter.c_str());
-};
+}
 
 template<typename Range>
 typename Range::const_iterator cmRemoveN(Range& r, size_t n)

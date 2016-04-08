@@ -809,44 +809,52 @@ void cmVisualStudio10TargetGenerator::WriteProjectConfigurationValues()
                                  i->c_str(),
                                  1, " Label=\"Configuration\"", "\n");
     std::string configType = "<ConfigurationType>";
-    switch(this->GeneratorTarget->GetType())
+    if (const char* vsConfigurationType =
+        this->GeneratorTarget->GetProperty("VS_CONFIGURATION_TYPE"))
       {
-      case cmState::SHARED_LIBRARY:
-      case cmState::MODULE_LIBRARY:
-        configType += "DynamicLibrary";
-        break;
-      case cmState::OBJECT_LIBRARY:
-      case cmState::STATIC_LIBRARY:
-        configType += "StaticLibrary";
-        break;
-      case cmState::EXECUTABLE:
-        if(this->NsightTegra &&
-           !this->GeneratorTarget->GetPropertyAsBool("ANDROID_GUI"))
-          {
-          // Android executables are .so too.
+      configType += cmVS10EscapeXML(vsConfigurationType);
+      }
+    else
+      {
+      switch(this->GeneratorTarget->GetType())
+        {
+        case cmState::SHARED_LIBRARY:
+        case cmState::MODULE_LIBRARY:
           configType += "DynamicLibrary";
-          }
-        else
-          {
-          configType += "Application";
-          }
-        break;
-      case cmState::UTILITY:
-      case cmState::GLOBAL_TARGET:
-        if(this->NsightTegra || this->Platform == "Durango")
-          {
-          // Tegra-Android platform does not understand "Utility".
-          // And XBOne screws it up
+          break;
+        case cmState::OBJECT_LIBRARY:
+        case cmState::STATIC_LIBRARY:
           configType += "StaticLibrary";
-          }
-        else
-          {
-          configType += "Utility";
-          }
-        break;
-      case cmState::UNKNOWN_LIBRARY:
-      case cmState::INTERFACE_LIBRARY:
-        break;
+          break;
+        case cmState::EXECUTABLE:
+          if(this->NsightTegra &&
+             !this->GeneratorTarget->GetPropertyAsBool("ANDROID_GUI"))
+            {
+            // Android executables are .so too.
+            configType += "DynamicLibrary";
+            }
+          else
+            {
+            configType += "Application";
+            }
+          break;
+        case cmState::UTILITY:
+        case cmState::GLOBAL_TARGET:
+        if(this->NsightTegra || this->Platform == "Durango")
+            {
+            // Tegra-Android platform does not understand "Utility".
+          // And XBOne screws it up
+            configType += "StaticLibrary";
+            }
+          else
+            {
+            configType += "Utility";
+            }
+          break;
+        case cmState::UNKNOWN_LIBRARY:
+        case cmState::INTERFACE_LIBRARY:
+          break;
+        }
       }
     configType += "</ConfigurationType>\n";
     this->WriteString(configType.c_str(), 2);
@@ -937,13 +945,16 @@ void cmVisualStudio10TargetGenerator
   std::string mfcFlagValue = mfcFlag ? mfcFlag : "0";
 
   std::string useOfMfcValue = "false";
-  if(mfcFlagValue == "1")
+  if(this->GeneratorTarget->GetType() <= cmState::OBJECT_LIBRARY)
     {
-    useOfMfcValue = "Static";
-    }
-  else if(mfcFlagValue == "2")
-    {
-    useOfMfcValue = "Dynamic";
+    if(mfcFlagValue == "1")
+      {
+      useOfMfcValue = "Static";
+      }
+    else if(mfcFlagValue == "2")
+      {
+      useOfMfcValue = "Dynamic";
+      }
     }
   std::string mfcLine = "<UseOfMfc>";
   mfcLine += useOfMfcValue + "</UseOfMfc>\n";
@@ -2310,7 +2321,18 @@ void cmVisualStudio10TargetGenerator::WriteClOptions(
 
   if(this->MSTools)
     {
-    this->WriteString("<ObjectFileName>$(IntDir)</ObjectFileName>\n", 3);
+    cmsys::RegularExpression clangToolset("v[0-9]+_clang_.*");
+    const char* toolset = this->GlobalGenerator->GetPlatformToolset();
+    if (toolset && clangToolset.find(toolset))
+      {
+      this->WriteString("<ObjectFileName>"
+                        "$(IntDir)%(filename).obj"
+                        "</ObjectFileName>\n", 3);
+      }
+    else
+      {
+      this->WriteString("<ObjectFileName>$(IntDir)</ObjectFileName>\n", 3);
+      }
 
     // If not in debug mode, write the DebugInformationFormat field
     // without value so PDBs don't get generated uselessly.
@@ -3000,6 +3022,34 @@ cmVisualStudio10TargetGenerator::ComputeLinkOptions(std::string const& config)
     if (this->GeneratorTarget->GetPropertyAsBool("WINDOWS_EXPORT_ALL_SYMBOLS"))
       {
       linkOptions.AddFlag("ModuleDefinitionFile", "$(IntDir)exportall.def");
+      }
+    }
+
+  // Hack to fix flag version selection in a common use case.
+  // FIXME: Select flag table based on toolset instead of VS version.
+  if (this->LocalGenerator->GetVersion() >=
+      cmGlobalVisualStudioGenerator::VS14)
+    {
+    cmGlobalVisualStudio10Generator* gg =
+      static_cast<cmGlobalVisualStudio10Generator*>(this->GlobalGenerator);
+    const char* toolset = gg->GetPlatformToolset();
+    if (toolset &&
+        (cmHasLiteralPrefix(toolset, "v100") ||
+         cmHasLiteralPrefix(toolset, "v110") ||
+         cmHasLiteralPrefix(toolset, "v120")))
+      {
+      if (const char* debug = linkOptions.GetFlag("GenerateDebugInformation"))
+        {
+        // Convert value from enumeration back to boolean for older toolsets.
+        if (strcmp(debug, "No") == 0)
+          {
+          linkOptions.AddFlag("GenerateDebugInformation", "false");
+          }
+        else if (strcmp(debug, "Debug") == 0)
+          {
+          linkOptions.AddFlag("GenerateDebugInformation", "true");
+          }
+        }
       }
     }
 

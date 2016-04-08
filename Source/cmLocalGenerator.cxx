@@ -455,11 +455,13 @@ void cmLocalGenerator::GenerateInstallRules()
 void cmLocalGenerator::AddGeneratorTarget(cmGeneratorTarget* gt)
 {
   this->GeneratorTargets.push_back(gt);
+  this->GlobalGenerator->IndexGeneratorTarget(gt);
 }
 
 void cmLocalGenerator::AddImportedGeneratorTarget(cmGeneratorTarget* gt)
 {
   this->ImportedGeneratorTargets.push_back(gt);
+  this->GlobalGenerator->IndexGeneratorTarget(gt);
 }
 
 void cmLocalGenerator::AddOwnedImportedGeneratorTarget(cmGeneratorTarget* gt)
@@ -483,19 +485,9 @@ private:
   std::string Name;
 };
 
-cmGeneratorTarget* cmLocalGenerator::FindGeneratorTarget(
+cmGeneratorTarget* cmLocalGenerator::FindLocalNonAliasGeneratorTarget(
     const std::string& name) const
 {
-  std::map<std::string, std::string>::const_iterator i =
-      this->AliasTargets.find(name);
-  if (i != this->AliasTargets.end())
-    {
-    std::vector<cmGeneratorTarget*>::const_iterator ai =
-        std::find_if(this->GeneratorTargets.begin(),
-                     this->GeneratorTargets.end(),
-                     NamedGeneratorTargetFinder(i->second));
-    return *ai;
-    }
   std::vector<cmGeneratorTarget*>::const_iterator ti =
       std::find_if(this->GeneratorTargets.begin(),
                    this->GeneratorTargets.end(),
@@ -504,7 +496,6 @@ cmGeneratorTarget* cmLocalGenerator::FindGeneratorTarget(
     {
     return *ti;
     }
-
   return 0;
 }
 
@@ -1837,7 +1828,7 @@ cmLocalGenerator::FindGeneratorTargetToUse(const std::string& name) const
     return *imported;
     }
 
-  if(cmGeneratorTarget* t = this->FindGeneratorTarget(name))
+  if(cmGeneratorTarget* t = this->FindLocalNonAliasGeneratorTarget(name))
     {
     return t;
     }
@@ -2453,7 +2444,7 @@ void cmLocalGenerator::JoinDefines(const std::set<std::string>& defines,
     else
       {
       // Make the definition appear properly on the command line.  Use
-      // -DNAME="value" instead of -D"NAME=value" to help VS6 parser.
+      // -DNAME="value" instead of -D"NAME=value" for historical reasons.
       std::string::size_type eq = defineIt->find("=");
       def += defineIt->substr(0, eq);
       if(eq != defineIt->npos)
@@ -2557,7 +2548,7 @@ public:
     cmInstallTargetGenerator(
       t, dest, implib, "", std::vector<std::string>(), "Unspecified",
       cmInstallGenerator::SelectMessageLevel(lg->GetMakefile()),
-      false)
+      false, false)
   {
     this->Compute(lg);
   }
@@ -2584,7 +2575,7 @@ cmLocalGenerator
     // Include the user-specified pre-install script for this target.
     if(const char* preinstall = (*l)->GetProperty("PRE_INSTALL_SCRIPT"))
       {
-      cmInstallScriptGenerator g(preinstall, false, 0);
+      cmInstallScriptGenerator g(preinstall, false, 0, false);
       g.Generate(os, config, configurationTypes);
       }
 
@@ -2645,7 +2636,7 @@ cmLocalGenerator
     // Include the user-specified post-install script for this target.
     if(const char* postinstall = (*l)->GetProperty("POST_INSTALL_SCRIPT"))
       {
-      cmInstallScriptGenerator g(postinstall, false, 0);
+      cmInstallScriptGenerator g(postinstall, false, 0, false);
       g.Generate(os, config, configurationTypes);
       }
     }

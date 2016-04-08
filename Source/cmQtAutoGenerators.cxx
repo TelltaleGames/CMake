@@ -797,7 +797,7 @@ void cmQtAutoGenerators::ParseCppFile(const std::string& absFilename,
                             "\", but does not contain a " << macroName
                             << " macro. Running moc on "
                         << "\"" << headerToMoc << "\" ! Include \"moc_"
-                        << basename << ".cpp\" for a compatiblity with "
+                        << basename << ".cpp\" for a compatibility with "
                            "strict mode (see CMAKE_AUTOMOC_RELAXED_MODE).\n"
                         << std::endl;
               }
@@ -808,7 +808,7 @@ void cmQtAutoGenerators::ParseCppFile(const std::string& absFilename,
                             "\" instead of \"moc_" << basename << ".cpp\". "
                             "Running moc on "
                         << "\"" << headerToMoc << "\" ! Include \"moc_"
-                        << basename << ".cpp\" for compatiblity with "
+                        << basename << ".cpp\" for compatibility with "
                            "strict mode (see CMAKE_AUTOMOC_RELAXED_MODE).\n"
                         << std::endl;
               }
@@ -850,7 +850,7 @@ void cmQtAutoGenerators::ParseCppFile(const std::string& absFilename,
                    "includes "
                 << "\"" << ownMocUnderscoreFile  << "\". Running moc on "
                 << "\"" << absFilename << "\" ! Better include \""
-                << scannedFileBasename << ".moc\" for compatiblity with "
+                << scannedFileBasename << ".moc\" for compatibility with "
                    "strict mode (see CMAKE_AUTOMOC_RELAXED_MODE).\n"
                 << std::endl;
       includedMocs[absFilename] = ownMocUnderscoreFile;

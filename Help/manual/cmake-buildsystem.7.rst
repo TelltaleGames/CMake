@@ -150,7 +150,7 @@ and :prop_tgt:`INTERFACE_COMPILE_OPTIONS` target properties.
 Each of the commands has a ``PRIVATE``, ``PUBLIC`` and ``INTERFACE`` mode.  The
 ``PRIVATE`` mode populates only the non-``INTERFACE_`` variant of the target
 property and the ``INTERFACE`` mode populates only the ``INTERFACE_`` variants.
-The ``PUBLIC`` mode populates both variants of the repective target property.
+The ``PUBLIC`` mode populates both variants of the respective target property.
 Each command may be invoked with multiple uses of each keyword:
 
 .. code-block:: cmake
@@ -427,7 +427,7 @@ specified will be calculated:
   )
 
   add_library(lib1Version3 SHARED lib1_v3.cpp)
-  set_property(TARGET lib1Version2 PROPERTY INTERFACE_CONTAINER_SIZE_REQUIRED 1000)
+  set_property(TARGET lib1Version3 PROPERTY INTERFACE_CONTAINER_SIZE_REQUIRED 1000)
 
   add_executable(exe1 exe1.cpp)
   # CONTAINER_SIZE_REQUIRED will be "200"

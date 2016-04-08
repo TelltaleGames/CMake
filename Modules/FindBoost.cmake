@@ -464,6 +464,8 @@ function(_Boost_GUESS_COMPILER_PREFIX _ret)
     set(_boost_COMPILER "-bcb")
   elseif(CMAKE_CXX_COMPILER_ID STREQUAL "SunPro")
     set(_boost_COMPILER "-sw")
+  elseif(CMAKE_CXX_COMPILER_ID STREQUAL "XL")
+    set(_boost_COMPILER "-xlc")
   elseif (MINGW)
     if(${Boost_MAJOR_VERSION}.${Boost_MINOR_VERSION} VERSION_LESS 1.34)
         set(_boost_COMPILER "-mgw") # no GCC version encoding prior to 1.34
@@ -707,7 +709,7 @@ function(_Boost_COMPONENT_DEPENDENCIES component _ret)
     set(_Boost_TIMER_DEPENDENCIES chrono system)
     set(_Boost_WAVE_DEPENDENCIES filesystem system serialization thread chrono date_time atomic)
     set(_Boost_WSERIALIZATION_DEPENDENCIES serialization)
-  elseif(NOT Boost_VERSION VERSION_LESS 106000 AND Boost_VERSION VERSION_LESS 106100)
+  elseif(NOT Boost_VERSION VERSION_LESS 106000 AND Boost_VERSION VERSION_LESS 106200)
     set(_Boost_CHRONO_DEPENDENCIES system)
     set(_Boost_COROUTINE_DEPENDENCIES context system)
     set(_Boost_FILESYSTEM_DEPENDENCIES system)
@@ -745,9 +747,10 @@ endfunction()
 # defined; FALSE if dependency information is unavailable).
 #
 # componentvar - the component list variable name
+# extravar - the indirect dependency list variable name
 #
 #
-function(_Boost_MISSING_DEPENDENCIES componentvar)
+function(_Boost_MISSING_DEPENDENCIES componentvar extravar)
   # _boost_unprocessed_components - list of components requiring processing
   # _boost_processed_components - components already processed (or currently being processed)
   # _boost_new_components - new components discovered for future processing
@@ -773,7 +776,12 @@ function(_Boost_MISSING_DEPENDENCIES componentvar)
     set(_boost_unprocessed_components ${_boost_new_components})
     unset(_boost_new_components)
   endwhile()
+  set(_boost_extra_components ${_boost_processed_components})
+  if(_boost_extra_components AND ${componentvar})
+    list(REMOVE_ITEM _boost_extra_components ${${componentvar}})
+  endif()
   set(${componentvar} ${_boost_processed_components} PARENT_SCOPE)
+  set(${extravar} ${_boost_extra_components} PARENT_SCOPE)
 endfunction()
 
 #
@@ -821,7 +829,7 @@ else()
   # information in _Boost_COMPONENT_DEPENDENCIES.  See the
   # instructions at the top of _Boost_COMPONENT_DEPENDENCIES.
   set(_Boost_KNOWN_VERSIONS ${Boost_ADDITIONAL_VERSIONS}
-    "1.60.0" "1.60"
+    "1.61.0" "1.61" "1.60.0" "1.60"
     "1.59.0" "1.59" "1.58.0" "1.58" "1.57.0" "1.57" "1.56.0" "1.56" "1.55.0" "1.55"
     "1.54.0" "1.54" "1.53.0" "1.53" "1.52.0" "1.52" "1.51.0" "1.51"
     "1.50.0" "1.50" "1.49.0" "1.49" "1.48.0" "1.48" "1.47.0" "1.47" "1.46.1"
@@ -1306,7 +1314,7 @@ endif()
 
 # Additional components may be required via component dependencies.
 # Add any missing components to the list.
-_Boost_MISSING_DEPENDENCIES(Boost_FIND_COMPONENTS)
+_Boost_MISSING_DEPENDENCIES(Boost_FIND_COMPONENTS _Boost_EXTRA_FIND_COMPONENTS)
 
 # If thread is required, get the thread libs as a dependency
 list(FIND Boost_FIND_COMPONENTS thread _Boost_THREAD_DEPENDENCY_LIBS)
@@ -1484,6 +1492,10 @@ if(Boost_FOUND)
       list(APPEND _Boost_MISSING_COMPONENTS ${COMPONENT})
     endif()
   endforeach()
+  if(_Boost_MISSING_COMPONENTS AND _Boost_EXTRA_FIND_COMPONENTS)
+    # Optional indirect dependencies are not counted as missing.
+    list(REMOVE_ITEM _Boost_MISSING_COMPONENTS ${_Boost_EXTRA_FIND_COMPONENTS})
+  endif()
 
   if(Boost_DEBUG)
     message(STATUS "[ ${CMAKE_CURRENT_LIST_FILE}:${CMAKE_CURRENT_LIST_LINE} ] Boost_FOUND = ${Boost_FOUND}")

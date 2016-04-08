@@ -86,6 +86,13 @@ cmGlobalGenerator::cmGlobalGenerator(cmake* cm)
   this->TryCompileOuterMakefile = 0;
 
   this->ConfigureDoneCMP0026AndCMP0024 = false;
+
+  cm->GetState()->SetMinGWMake(false);
+  cm->GetState()->SetMSYSShell(false);
+  cm->GetState()->SetNMake(false);
+  cm->GetState()->SetWatcomWMake(false);
+  cm->GetState()->SetWindowsShell(false);
+  cm->GetState()->SetWindowsVSIDE(false);
 }
 
 cmGlobalGenerator::~cmGlobalGenerator()
@@ -389,6 +396,21 @@ cmGlobalGenerator::EnableLanguage(std::vector<std::string>const& languages,
     cmSystemTools::Error("EnableLanguage must have a lang specified!");
     cmSystemTools::SetFatalErrorOccured();
     return;
+    }
+
+  std::set<std::string> cur_languages(languages.begin(), languages.end());
+  for (std::set<std::string>::iterator li = cur_languages.begin();
+       li != cur_languages.end(); ++li)
+    {
+    if (!this->LanguagesInProgress.insert(*li).second)
+      {
+      std::ostringstream e;
+      e << "Language '" << *li << "' is currently being enabled.  "
+        "Recursive call not allowed.";
+      mf->IssueMessage(cmake::FATAL_ERROR, e.str());
+      cmSystemTools::SetFatalErrorOccured();
+      return;
+      }
     }
 
   if(this->TryCompileOuterMakefile)
@@ -798,7 +820,7 @@ cmGlobalGenerator::EnableLanguage(std::vector<std::string>const& languages,
   // Now load files that can override any settings on the platform or for
   // the project First load the project compatibility file if it is in
   // cmake
-  std::string projectCompatibility = mf->GetDefinition("CMAKE_ROOT");
+  std::string projectCompatibility = cmSystemTools::GetCMakeRoot();
   projectCompatibility += "/Modules/";
   projectCompatibility += mf->GetSafeDefinition("PROJECT_NAME");
   projectCompatibility += "Compatibility.cmake";
@@ -815,6 +837,12 @@ cmGlobalGenerator::EnableLanguage(std::vector<std::string>const& languages,
   if(fatalError)
     {
     cmSystemTools::SetFatalErrorOccured();
+    }
+
+  for (std::set<std::string>::iterator li = cur_languages.begin();
+       li != cur_languages.end(); ++li)
+    {
+    this->LanguagesInProgress.erase(*li);
     }
 }
 
@@ -1649,6 +1677,8 @@ void cmGlobalGenerator::ClearGeneratorMembers()
 
   this->ExportSets.clear();
   this->TargetDependencies.clear();
+  this->TargetSearchIndex.clear();
+  this->GeneratorTargetSearchIndex.clear();
   this->ProjectMap.clear();
   this->RuleHashes.clear();
   this->DirectoryContentMap.clear();
@@ -1850,7 +1880,7 @@ int cmGlobalGenerator::Build(
       !makeCommand.empty() && cmSystemTools::LowerCase(
         cmSystemTools::GetFilenameName(makeCommand[0])) == "vcexpress.exe")
     {
-    outputflag = cmSystemTools::OUTPUT_NORMAL;
+    outputflag = cmSystemTools::OUTPUT_FORWARD;
     }
 
   // should we do a clean first?
@@ -2177,18 +2207,28 @@ bool cmGlobalGenerator::IsAlias(const std::string& name) const
   return this->AliasTargets.find(name) != this->AliasTargets.end();
 }
 
+void cmGlobalGenerator::IndexTarget(cmTarget* t)
+{
+  if (!t->IsImported() || t->IsImportedGloballyVisible())
+    {
+    this->TargetSearchIndex[t->GetName()] = t;
+    }
+}
+
+void cmGlobalGenerator::IndexGeneratorTarget(cmGeneratorTarget* gt)
+{
+  if (!gt->IsImported() || gt->IsImportedGloballyVisible())
+    {
+    this->GeneratorTargetSearchIndex[gt->GetName()] = gt;
+    }
+}
+
 cmTarget* cmGlobalGenerator::FindTargetImpl(std::string const& name) const
 {
-  for (unsigned int i = 0; i < this->Makefiles.size(); ++i)
+  TargetMap::const_iterator i = this->TargetSearchIndex.find(name);
+  if (i != this->TargetSearchIndex.end())
     {
-    cmTargets& tgts = this->Makefiles[i]->GetTargets();
-    for (cmTargets::iterator it = tgts.begin(); it != tgts.end(); ++it)
-      {
-      if (it->second.GetName() == name)
-        {
-        return &it->second;
-        }
-      }
+    return i->second;
     }
   return 0;
 }
@@ -2196,56 +2236,11 @@ cmTarget* cmGlobalGenerator::FindTargetImpl(std::string const& name) const
 cmGeneratorTarget*
 cmGlobalGenerator::FindGeneratorTargetImpl(std::string const& name) const
 {
-  for (unsigned int i = 0; i < this->LocalGenerators.size(); ++i)
+  GeneratorTargetMap::const_iterator i =
+    this->GeneratorTargetSearchIndex.find(name);
+  if (i != this->GeneratorTargetSearchIndex.end())
     {
-    std::vector<cmGeneratorTarget*> tgts =
-        this->LocalGenerators[i]->GetGeneratorTargets();
-    for (std::vector<cmGeneratorTarget*>::iterator it = tgts.begin();
-         it != tgts.end(); ++it)
-      {
-      if ((*it)->GetName() == name)
-        {
-        return *it;
-        }
-      }
-    }
-  return 0;
-}
-
-cmTarget*
-cmGlobalGenerator::FindImportedTargetImpl(std::string const& name) const
-{
-  for (unsigned int i = 0; i < this->Makefiles.size(); ++i)
-    {
-    std::vector<cmTarget*> tgts =
-        this->Makefiles[i]->GetOwnedImportedTargets();
-    for (std::vector<cmTarget*>::iterator it = tgts.begin();
-         it != tgts.end(); ++it)
-      {
-      if ((*it)->GetName() == name && (*it)->IsImportedGloballyVisible())
-        {
-        return *it;
-        }
-      }
-    }
-  return 0;
-}
-
-cmGeneratorTarget* cmGlobalGenerator::FindImportedGeneratorTargetImpl(
-    std::string const& name) const
-{
-  for (unsigned int i = 0; i < this->LocalGenerators.size(); ++i)
-    {
-    std::vector<cmGeneratorTarget*> tgts =
-        this->LocalGenerators[i]->GetImportedGeneratorTargets();
-    for (std::vector<cmGeneratorTarget*>::iterator it = tgts.begin();
-         it != tgts.end(); ++it)
-      {
-      if ((*it)->IsImportedGloballyVisible() && (*it)->GetName() == name)
-        {
-        return *it;
-        }
-      }
+    return i->second;
     }
   return 0;
 }
@@ -2264,11 +2259,7 @@ cmGlobalGenerator::FindTarget(const std::string& name,
       return this->FindTargetImpl(ai->second);
       }
     }
-  if (cmTarget* tgt = this->FindTargetImpl(name))
-    {
-    return tgt;
-    }
-  return this->FindImportedTargetImpl(name);
+  return this->FindTargetImpl(name);
 }
 
 cmGeneratorTarget*
@@ -2280,11 +2271,7 @@ cmGlobalGenerator::FindGeneratorTarget(const std::string& name) const
     {
     return this->FindGeneratorTargetImpl(ai->second);
     }
-  if (cmGeneratorTarget* tgt = this->FindGeneratorTargetImpl(name))
-    {
-    return tgt;
-    }
-  return this->FindImportedGeneratorTargetImpl(name);
+  return this->FindGeneratorTargetImpl(name);
 }
 
 //----------------------------------------------------------------------------

@@ -30,8 +30,10 @@ cmInstallTargetGenerator
                            std::vector<std::string> const& configurations,
                            const char* component,
                            MessageLevel message,
+                           bool exclude_from_all,
                            bool optional):
-  cmInstallGenerator(dest, configurations, component, message),
+  cmInstallGenerator(dest, configurations, component, message,
+                     exclude_from_all),
   TargetName(targetName),
   Target(0),
   FilePermissions(file_permissions),
@@ -446,7 +448,7 @@ cmInstallTargetGenerator::GetInstallFilename(cmGeneratorTarget const* target,
 
 void cmInstallTargetGenerator::Compute(cmLocalGenerator* lg)
 {
-  this->Target = lg->FindGeneratorTarget(this->TargetName);
+  this->Target = lg->FindLocalNonAliasGeneratorTarget(this->TargetName);
 }
 
 //----------------------------------------------------------------------------
@@ -791,18 +793,10 @@ cmInstallTargetGenerator
       }
 
     // Write a rule to run chrpath to set the install-tree RPATH
-    if(newRpath.empty())
-      {
-      os << indent << "file(RPATH_REMOVE\n"
-         << indent << "     FILE \"" << toDestDirPath << "\")\n";
-      }
-    else
-      {
-      os << indent << "file(RPATH_CHANGE\n"
-         << indent << "     FILE \"" << toDestDirPath << "\"\n"
-         << indent << "     OLD_RPATH \"" << oldRpath << "\"\n"
-         << indent << "     NEW_RPATH \"" << newRpath << "\")\n";
-      }
+    os << indent << "file(RPATH_CHANGE\n"
+       << indent << "     FILE \"" << toDestDirPath << "\"\n"
+       << indent << "     OLD_RPATH \"" << oldRpath << "\"\n"
+       << indent << "     NEW_RPATH \"" << newRpath << "\")\n";
     }
 }
 
