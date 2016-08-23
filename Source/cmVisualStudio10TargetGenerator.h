@@ -128,6 +128,7 @@ private:
   void WriteLibOptions(std::string const& config);
   void WriteManifestOptions(std::string const& config);
   void WriteXbox360Options();
+  void WritePS3Options();
   void WriteEvents(std::string const& configName);
   void WriteEvent(const char* name,
                   std::vector<cmCustomCommand> const& commands,

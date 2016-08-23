@@ -2592,6 +2592,21 @@ void cmVisualStudio10TargetGenerator::WriteXbox360Options()
 	}
 }
 
+void cmVisualStudio10TargetGenerator::WritePS3Options()
+{
+	if(this->Platform == "PS3")
+	{
+		const char* embedFormat = this->GeneratorTarget->GetProperty("SPU_ELF_CONV_EMBED_FORMAT");
+		if( embedFormat != NULL )
+		{
+			this->WriteString("<SpuElfConversion>\n", 2);
+			this->WriteString("<EmbedFormat>",3);
+			*this->BuildFileStream << embedFormat << "</EmbedFormat>\n";
+			this->WriteString("</SpuElfConversion>\n", 2);
+		}
+	}
+}
+
 //----------------------------------------------------------------------------
 void cmVisualStudio10TargetGenerator::WriteAntBuildOptions(
   std::string const& configName)
@@ -3257,6 +3272,7 @@ void cmVisualStudio10TargetGenerator::WriteItemDefinitionGroups()
     //    output manifest flags  <Manifest></Manifest>
     this->WriteManifestOptions(*i);
     this->WriteXbox360Options();
+	this->WritePS3Options();
     if(this->NsightTegra &&
        this->GeneratorTarget->GetType() == cmState::EXECUTABLE &&
        this->GeneratorTarget->GetPropertyAsBool("ANDROID_GUI"))
