@@ -70,6 +70,10 @@ public:
 	  {
 		  return new cmGlobalVisualStudio14Generator( cm, genName, "Cafe" );
 	  }
+	  if( strcmp( p, "NX" ) == 0 )
+	  {
+		  return new cmGlobalVisualStudio14Generator( cm, genName, "NX64" );
+	  }
       return 0;
   }
 
@@ -90,6 +94,7 @@ public:
   	  names.push_back(vs14generatorName + std::string(" XBOne"));
       names.push_back(vs14generatorName + std::string(" PS4"));
 	  names.push_back(vs14generatorName + std::string(" WiiU"));
+	  names.push_back(vs14generatorName + std::string(" NX"));
     }
 
   virtual bool SupportsToolset() const { return true; }

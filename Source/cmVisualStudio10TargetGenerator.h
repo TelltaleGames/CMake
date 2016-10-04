@@ -82,6 +82,7 @@ private:
   void WriteMissingFilesWS10_0();
 
   void WritePropertySheets();
+  void WritePropertySheetsPerConfiguration();
   // called from WritePropertySheets
   void WritePlatformExtensions();
   // called from WritePropertySheets

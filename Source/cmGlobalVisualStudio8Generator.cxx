@@ -174,6 +174,10 @@ void cmGlobalVisualStudio8Generator::AddPlatformDefinitions(cmMakefile* mf)
   {
 	  mf->AddDefinition("CMAKE_FORCE_WIIU", "TRUE");
   }
+  else if(this->GetPlatformName() == "NX64")
+  {
+	  mf->AddDefinition("CMAKE_FORCE_NX", "TRUE");
+  }
 }
 
 //----------------------------------------------------------------------------

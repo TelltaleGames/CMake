@@ -538,8 +538,9 @@ void cmVisualStudio10TargetGenerator::Generate()
     }
   this->WriteString("</ImportGroup>\n", 1);
 
+  this->WritePropertySheetsPerConfiguration();
   this->WritePropertySheets();
-
+ 
   this->WriteString("<PropertyGroup Label=\"UserMacros\" />\n", 1);
   this->WriteWinRTPackageCertificateKeyFile();
   this->WritePathAndIncrementalLinkOptions();
@@ -2329,6 +2330,12 @@ void cmVisualStudio10TargetGenerator::WriteClOptions(
                         "$(IntDir)%(filename).obj"
                         "</ObjectFileName>\n", 3);
       }
+	else if(this->GlobalGenerator->GetPlatformName() == "NX64")
+	{
+		this->WriteString("<ObjectFileName>"
+			"$(IntDir)%(FileName).o"
+			"</ObjectFileName>\n", 3);
+	}
     else
       {
       this->WriteString("<ObjectFileName>$(IntDir)</ObjectFileName>\n", 3);
@@ -2865,7 +2872,6 @@ cmVisualStudio10TargetGenerator::ComputeLinkOptions(std::string const& config)
 
   if( this->Platform == "Cafe")
   {
-
       std::vector<std::string> debugConfigs =
         this->Makefile->GetCMakeInstance()->GetDebugConfigs();
       cmTargetLinkLibraryType libType = CMP0003_ComputeLinkType(config, debugConfigs);
@@ -3408,6 +3414,35 @@ void cmVisualStudio10TargetGenerator::WritePropertySheets()
     this->WritePropertySheetImports();
     this->WritePlatformExtensions();
     this->WriteString("</ImportGroup>\n", 1);
+}
+
+void cmVisualStudio10TargetGenerator::WritePropertySheetsPerConfiguration()
+{
+	for(std::vector<std::string>::const_iterator
+		config = this->Configurations.begin();
+		config != this->Configurations.end(); ++config)
+	{		
+		std::string configUpper = cmSystemTools::UpperCase(*config);
+		std::string defPropName = "VS_PROPERTY_SHEETS_";
+		defPropName += configUpper;
+
+		const char* vsPropSheets = this->GeneratorTarget->GetProperty(defPropName);
+		if(vsPropSheets)
+		{
+			std::vector<std::string> propSheets;
+			cmSystemTools::ExpandListArgument(vsPropSheets, propSheets);
+
+			this->WritePlatformConfigTag("ImportGroup Label=\"PropertySheets\"", config->c_str(), 1, NULL, "\n");
+
+			for(auto i = propSheets.begin(); i != propSheets.end(); i++)
+			{
+				this->WriteString("<Import Project=\"", 2);
+				*(this->BuildFileStream) << *i << "\"/>\n";
+			}
+
+			this->WriteString("</ImportGroup>\n", 1);
+		}
+	}
 }
 
 void cmVisualStudio10TargetGenerator::WritePropertySheetImports()
