@@ -267,6 +267,34 @@ void cmVisualStudio10TargetGenerator::WritePlatformConfigTag(
     }
 }
 
+void cmVisualStudio10TargetGenerator::WritePlatformTag(
+	const char* tag,
+	int indentLevel,
+	const char* attribute,
+	const char* end,
+	std::ostream* stream)
+
+{
+	if(!stream)
+	{
+		stream = this->BuildFileStream;
+	}
+	stream->fill(' ');
+	stream->width(indentLevel*2 );
+	(*stream ) << "";
+	(*stream ) << "<" << tag;
+	if(attribute)
+	{
+		(*stream ) << attribute;
+	}
+	// close the tag
+	(*stream ) << ">";
+	if(end)
+	{
+		(*stream ) << end;
+	}
+}
+
 void cmVisualStudio10TargetGenerator::WriteString(const char* line,
                                                   int indentLevel)
 {
@@ -930,9 +958,41 @@ void cmVisualStudio10TargetGenerator::WriteProjectConfigurationValues()
                           "</ExceptionsAndRtti>\n", 2);
       }
       }
-    this->WriteString("</PropertyGroup>\n", 1);
+
+	  const char* vsProjectConfigValues = this->GeneratorTarget->GetProperty("VS_PROJECT_CONFIG_VALUES");
+      this->WriteCustomValues(vsProjectConfigValues);
+
+	  std::string defPropName = "VS_PROJECT_CONFIG_VALUES_" + cmSystemTools::UpperCase(*i);
+	  vsProjectConfigValues = this->GeneratorTarget->GetProperty(defPropName);
+      this->WriteCustomValues(vsProjectConfigValues);
+
+	  this->WriteString("</PropertyGroup>\n", 1);
     }
 }
+
+void cmVisualStudio10TargetGenerator::WriteCustomValues(char const* vsCustomValues)
+{
+	if(vsCustomValues)
+	{
+		std::vector<std::string> customValues;
+		cmSystemTools::ExpandListArgument(vsCustomValues, customValues);
+
+		for(auto it = customValues.begin(); it != customValues.end(); ++it)
+		{
+			const auto& customValue = *it;
+			std::string::size_type pos = customValue.find('=');
+			if(pos != std::string::npos)
+			{
+				std::string tag = customValue.substr(0, pos);
+				std::string value = customValue.substr(pos + 1);
+
+				this->WritePlatformTag(tag.c_str(), 2);
+				*this->BuildFileStream << value.c_str() << "</" << tag.c_str() << ">\n";
+			}
+		}
+	}
+}
+
 
 //----------------------------------------------------------------------------
 void cmVisualStudio10TargetGenerator

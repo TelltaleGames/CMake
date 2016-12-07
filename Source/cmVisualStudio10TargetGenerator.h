@@ -42,6 +42,14 @@ public:
     std::ostream* strm = 0
     );
 
+  void WritePlatformTag(
+	  const char* tag,
+	  int indentLevel,
+	  const char* attribute = 0,
+	  const char* end = 0,
+	  std::ostream* strm = 0
+	  );
+
 private:
   struct ToolSource
   {
@@ -55,6 +63,7 @@ private:
   void WriteString(const char* line, int indentLevel);
   void WriteProjectConfigurations();
   void WriteProjectConfigurationValues();
+  void WriteCustomValues(char const* vsCustomValues);
   void WriteMSToolConfigurationValues(std::string const& config);
   void WriteHeaderSource(cmSourceFile const* sf);
   void WriteExtraSource(cmSourceFile const* sf);
