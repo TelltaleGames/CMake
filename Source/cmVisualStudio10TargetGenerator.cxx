@@ -3183,17 +3183,19 @@ cmVisualStudio10TargetGenerator::WriteLinkOptions(std::string const& config)
   linkOptions.OutputFlagMap(*this->BuildFileStream, "      ");
 
   this->WriteString("</Link>\n", 2);
-  if(!this->GlobalGenerator->NeedLinkLibraryDependencies(
-              this->GeneratorTarget))
-    {
-    this->WriteString("<ProjectReference>\n", 2);
-    this->WriteString(
-      "<LinkLibraryDependencies>false</LinkLibraryDependencies>\n", 3);
-    //TODO: This might not always be correct?
-    this->WriteString("<ReferenceOutputAssembly>false"
-                    "</ReferenceOutputAssembly>\n", 3);
-    this->WriteString("</ProjectReference>\n", 2);
-    }
+
+  // NX needs link library dependency for library references
+  if( this->GlobalGenerator->GetPlatformName() != "NX64" )
+  {
+	  if(!this->GlobalGenerator->NeedLinkLibraryDependencies(
+		  this->GeneratorTarget))
+	  {
+		  this->WriteString("<ProjectReference>\n", 2);
+		  this->WriteString(
+			  "<LinkLibraryDependencies>false</LinkLibraryDependencies>\n", 3);
+		  this->WriteString("</ProjectReference>\n", 2);
+	  }
+  }
 }
 
 //----------------------------------------------------------------------------
@@ -3457,9 +3459,6 @@ void cmVisualStudio10TargetGenerator::WriteProjectReferences()
     (*this->BuildFileStream)
       << this->GlobalGenerator->GetGUID(name.c_str())
       << "</Project>\n";
-    //TODO: This might not always be correct?
-    this->WriteString("<ReferenceOutputAssembly>false"
-                    "</ReferenceOutputAssembly>\n", 3);
     this->WriteString("</ProjectReference>\n", 2);
     }
   this->WriteString("</ItemGroup>\n", 1);
