@@ -125,16 +125,22 @@ The object files collection can be used as source inputs to other targets:
 
   add_executable(test_exe $<TARGET_OBJECTS:archive> test.cpp)
 
-``OBJECT`` libraries may only be used locally as sources in a buildsystem --
-they may not be installed, exported, or used in the right hand side of
+``OBJECT`` libraries may not be used in the right hand side of
 :command:`target_link_libraries`.  They also may not be used as the ``TARGET``
-in a use of the :command:`add_custom_command(TARGET)` command signature.
+in a use of the :command:`add_custom_command(TARGET)` command signature.  They
+may be installed, and will be exported as an INTERFACE library.
 
 Although object libraries may not be named directly in calls to
 the :command:`target_link_libraries` command, they can be "linked"
 indirectly by using an :ref:`Interface Library <Interface Libraries>`
 whose :prop_tgt:`INTERFACE_SOURCES` target property is set to name
 ``$<TARGET_OBJECTS:objlib>``.
+
+Although object libraries may not be used as the ``TARGET``
+in a use of the :command:`add_custom_command(TARGET)` command signature,
+the list of objects can be used by :command:`add_custom_command(OUTPUT)` or
+:command:`file(GENERATE)` by using ``$<TARGET_OBJECTS:objlib>``.
+
 
 Build Specification and Usage Requirements
 ==========================================
@@ -860,7 +866,7 @@ with :prop_tgt:`IMPORTED` targets.
 Alias Targets
 -------------
 
-An ``ALIAS`` target is a name which may be used interchangably with
+An ``ALIAS`` target is a name which may be used interchangeably with
 a binary target name in read-only contexts.  A primary use-case for ``ALIAS``
 targets is for example or unit test executables accompanying a library, which
 may be part of the same buildsystem or built separately based on user
@@ -964,6 +970,8 @@ are:
 * ``EXPORT_NAME``
 * ``IMPORTED``
 * ``NAME``
+* ``NO_SYSTEM_FROM_IMPORTED``
+* Properties matching ``IMPORTED_LIBNAME_*``
 * Properties matching ``MAP_IMPORTED_CONFIG_*``
 
 ``INTERFACE`` libraries may be installed and exported.  Any content they refer

@@ -30,7 +30,13 @@ Building CMake
 Supported Platforms
 -------------------
 
-MS Windows, Mac OS X, Linux, FreeBSD, Solaris, HP-UX, IRIX, BeOS, QNX
+* Microsoft Windows
+* Apple macOS
+* Linux
+* FreeBSD
+* OpenBSD
+* Solaris
+* HP-UX
 
 Other UNIX-like operating systems may work too out of the box, if not
 it should not be a major problem to port CMake to this platform.
@@ -89,7 +95,7 @@ If you have found a bug:
 3. Finally, if the issue is not resolved by the above steps, open
    an entry in the `CMake Issue Tracker`_.
 
-.. _`CMake Issue Tracker`: https://cmake.org/Bug
+.. _`CMake Issue Tracker`: https://gitlab.kitware.com/cmake/cmake/issues
 
 Contributing
 ============

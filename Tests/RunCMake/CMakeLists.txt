@@ -63,15 +63,6 @@ if(XCODE_VERSION AND "${XCODE_VERSION}" VERSION_LESS 6.1)
   set(Swift_ARGS -DXCODE_BELOW_6_1=1)
 endif()
 
-if(XCODE_VERSION AND "${XCODE_VERSION}" VERSION_LESS 3)
-  set(GeneratorToolset_ARGS -DXCODE_BELOW_3=1)
-endif()
-
-if(XCODE_VERSION AND "${XCODE_VERSION}" VERSION_LESS 2)
-  set(TargetSources_ARGS -DXCODE_BELOW_2=1)
-  set(File_Generate_ARGS -DXCODE_BELOW_2=1)
-endif()
-
 # Test MSVC for older host CMake versions, and test
 # WIN32/CMAKE_C_COMPILER_ID to fix check on Intel for Windows.
 if(MSVC OR (WIN32 AND CMAKE_C_COMPILER_ID MATCHES "MSVC|Intel"))
@@ -104,6 +95,10 @@ add_RunCMake_test(CMP0057)
 add_RunCMake_test(CMP0059)
 add_RunCMake_test(CMP0060)
 add_RunCMake_test(CMP0064)
+if(CMAKE_SYSTEM_NAME MATCHES Darwin AND CMAKE_SHARED_LIBRARY_RUNTIME_C_FLAG)
+  add_RunCMake_test(CMP0068)
+endif()
+add_RunCMake_test(CMP0069)
 
 # The test for Policy 65 requires the use of the
 # CMAKE_SHARED_LIBRARY_LINK_CXX_FLAGS variable, which both the VS and Xcode
@@ -115,6 +110,10 @@ if(CMAKE_GENERATOR MATCHES "Make")
   add_RunCMake_test(Make)
 endif()
 if(CMAKE_GENERATOR STREQUAL "Ninja")
+  set(Ninja_ARGS
+    -DCMAKE_C_OUTPUT_EXTENSION=${CMAKE_C_OUTPUT_EXTENSION}
+    -DCMAKE_SHARED_LIBRARY_PREFIX=${CMAKE_SHARED_LIBRARY_PREFIX}
+    -DCMAKE_SHARED_LIBRARY_SUFFIX=${CMAKE_SHARED_LIBRARY_SUFFIX})
   add_RunCMake_test(Ninja)
 endif()
 add_RunCMake_test(CTest)
@@ -131,6 +130,7 @@ if(NOT CMake_TEST_EXTERNAL_CMAKE)
     )
 endif()
 
+add_RunCMake_test(AndroidTestUtilities)
 add_RunCMake_test(BuildDepends)
 if(UNIX AND "${CMAKE_GENERATOR}" MATCHES "Unix Makefiles|Ninja")
   add_RunCMake_test(CompilerChange)
@@ -141,14 +141,20 @@ add_RunCMake_test(DisallowedCommands)
 add_RunCMake_test(ExternalData)
 add_RunCMake_test(FeatureSummary)
 add_RunCMake_test(FPHSA)
+if(NOT CMAKE_C_COMPILER_ID MATCHES "Watcom")
+  add_RunCMake_test(GenerateExportHeader)
+endif()
 add_RunCMake_test(GeneratorExpression)
 add_RunCMake_test(GeneratorPlatform)
 add_RunCMake_test(GeneratorToolset)
-add_RunCMake_test(GNUInstallDirs)
+add_RunCMake_test(GNUInstallDirs -DSYSTEM_NAME=${CMAKE_SYSTEM_NAME})
 add_RunCMake_test(TargetPropertyGeneratorExpressions)
 add_RunCMake_test(Languages)
 add_RunCMake_test(LinkStatic)
 add_RunCMake_test(ObjectLibrary)
+if(UNIX AND CMAKE_SHARED_LIBRARY_RUNTIME_C_FLAG AND CMAKE_EXECUTABLE_FORMAT STREQUAL "ELF")
+  add_RunCMake_test(RuntimePath)
+endif()
 add_RunCMake_test(Swift)
 add_RunCMake_test(TargetObjects)
 add_RunCMake_test(TargetSources)
@@ -175,12 +181,16 @@ add_RunCMake_test(add_custom_target)
 add_RunCMake_test(add_dependencies)
 add_RunCMake_test(add_subdirectory)
 add_RunCMake_test(build_command)
+if(NOT CMake_TEST_EXTERNAL_CMAKE)
+  set(execute_process_ARGS -DTEST_ENCODING_EXE=$<TARGET_FILE:testEncoding>)
+endif()
 add_RunCMake_test(execute_process)
 add_RunCMake_test(export)
 add_RunCMake_test(cmake_minimum_required)
 add_RunCMake_test(cmake_parse_arguments)
 add_RunCMake_test(continue)
 add_RunCMake_test(ctest_build)
+add_RunCMake_test(ctest_cmake_error)
 add_RunCMake_test(ctest_configure)
 if(COVERAGE_COMMAND)
   add_RunCMake_test(ctest_coverage -DCOVERAGE_COMMAND=${COVERAGE_COMMAND})
@@ -188,7 +198,10 @@ endif()
 add_RunCMake_test(ctest_start)
 add_RunCMake_test(ctest_submit)
 add_RunCMake_test(ctest_test)
+add_RunCMake_test(ctest_disabled_test)
+add_RunCMake_test(ctest_skipped_test)
 add_RunCMake_test(ctest_upload)
+add_RunCMake_test(ctest_fixtures)
 add_RunCMake_test(file)
 add_RunCMake_test(find_file)
 add_RunCMake_test(find_library)
@@ -202,10 +215,24 @@ add_RunCMake_test(include)
 add_RunCMake_test(include_directories)
 add_RunCMake_test(list)
 add_RunCMake_test(message)
-add_RunCMake_test(project)
+add_RunCMake_test(project -DCMake_TEST_RESOURCES=${CMake_TEST_RESOURCES})
 add_RunCMake_test(return)
+add_RunCMake_test(separate_arguments)
 add_RunCMake_test(set_property)
 add_RunCMake_test(string)
+foreach(var
+    CMAKE_C_COMPILER_ID
+    CMAKE_C_COMPILER_VERSION
+    CMAKE_C_STANDARD_DEFAULT
+    CMAKE_CXX_COMPILER_ID
+    CMAKE_CXX_COMPILER_VERSION
+    CMAKE_CXX_STANDARD_DEFAULT
+    CMake_TEST_CUDA
+    )
+  if(DEFINED ${var})
+    list(APPEND try_compile_ARGS -D${var}=${${var}})
+  endif()
+endforeach()
 add_RunCMake_test(try_compile)
 add_RunCMake_test(try_run)
 add_RunCMake_test(set)
@@ -233,24 +260,28 @@ if(PKG_CONFIG_FOUND)
   add_RunCMake_test(FindPkgConfig)
 endif()
 
+find_package(GTK2 QUIET)
+if (GTK2_FOUND)
+  add_RunCMake_test(FindGTK2)
+endif()
+
 if("${CMAKE_GENERATOR}" MATCHES "Visual Studio")
   add_RunCMake_test(include_external_msproject)
-  if("${CMAKE_GENERATOR}" MATCHES "Visual Studio ([789]|10)" AND NOT CMAKE_VS_DEVENV_COMMAND)
+  if("${CMAKE_GENERATOR}" MATCHES "Visual Studio ([89]|10)" AND NOT CMAKE_VS_DEVENV_COMMAND)
     set(NO_USE_FOLDERS 1)
   endif()
   add_RunCMake_test(VSSolution -DNO_USE_FOLDERS=${NO_USE_FOLDERS})
 endif()
 
-if("${CMAKE_GENERATOR}" MATCHES "Visual Studio ([^789]|[789][0-9])")
+if("${CMAKE_GENERATOR}" MATCHES "Visual Studio ([^89]|[89][0-9])")
   add_RunCMake_test(VS10Project)
 endif()
 
-if(XCODE_VERSION AND NOT "${XCODE_VERSION}" VERSION_LESS 3)
+if(XCODE_VERSION)
   add_RunCMake_test(XcodeProject -DXCODE_VERSION=${XCODE_VERSION})
 endif()
 
-if(NOT XCODE
-    AND CMAKE_C_COMPILER_ID STREQUAL "AppleClang"
+if(CMAKE_C_COMPILER_ID STREQUAL "AppleClang"
     AND NOT CMAKE_C_COMPILER_VERSION VERSION_LESS 6.0)
   add_RunCMake_test(Framework)
 endif()
@@ -261,7 +292,8 @@ add_RunCMake_test(target_link_libraries)
 
 add_RunCMake_test(target_compile_features)
 add_RunCMake_test(CheckModules)
-add_RunCMake_test(CommandLine)
+add_RunCMake_test(CheckIPOSupported)
+add_RunCMake_test(CommandLine -DCMAKE_SYSTEM_NAME=${CMAKE_SYSTEM_NAME})
 add_RunCMake_test(CommandLineTar)
 
 add_RunCMake_test(install)
@@ -289,24 +321,53 @@ if(CMake_TEST_FindMatlab)
 endif()
 
 add_executable(pseudo_emulator pseudo_emulator.c)
+add_executable(pseudo_emulator_custom_command pseudo_emulator_custom_command.c)
 add_RunCMake_test(CrosscompilingEmulator
- -DPSEUDO_EMULATOR=$<TARGET_FILE:pseudo_emulator>)
-# Xcode 2.x forgets to create the output directory before linking
-# the individual architectures.
-if(CMAKE_OSX_ARCHITECTURES AND XCODE AND NOT "${XCODE_VERSION}" MATCHES "^[^12]")
-  add_custom_command(
-    TARGET pseudo_emulator
-    PRE_BUILD COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_CFG_INTDIR}"
-    )
-endif()
-
+ -DPSEUDO_EMULATOR=$<TARGET_FILE:pseudo_emulator>
+ -DPSEUDO_EMULATOR_CUSTOM_COMMAND=$<TARGET_FILE:pseudo_emulator_custom_command>)
 if("${CMAKE_GENERATOR}" MATCHES "Make|Ninja")
+  if(UNIX AND NOT CYGWIN)
+    execute_process(COMMAND ldd --help
+      OUTPUT_VARIABLE LDD_HELP
+      ERROR_VARIABLE LDD_ERR)
+    if("${LDD_HELP}" MATCHES
+        "(-r, --function-relocs.*process data and function relocations.*-u, --unused.*print unused direct dependencies)")
+      add_RunCMake_test(LinkWhatYouUse)
+    endif()
+  endif()
+  add_executable(pseudo_tidy pseudo_tidy.c)
   add_executable(pseudo_iwyu pseudo_iwyu.c)
+  add_executable(pseudo_cpplint pseudo_cpplint.c)
+  add_RunCMake_test(ClangTidy -DPSEUDO_TIDY=$<TARGET_FILE:pseudo_tidy>)
   add_RunCMake_test(IncludeWhatYouUse -DPSEUDO_IWYU=$<TARGET_FILE:pseudo_iwyu>)
+  add_RunCMake_test(Cpplint -DPSEUDO_CPPLINT=$<TARGET_FILE:pseudo_cpplint>)
   add_RunCMake_test(CompilerLauncher)
 endif()
 
-add_RunCMake_test_group(CPack "DEB;RPM;TGZ")
+add_RunCMake_test_group(CPack "DEB;RPM;7Z;TBZ2;TGZ;TXZ;TZ;ZIP;STGZ")
 # add a test to make sure symbols are exported from a shared library
 # for MSVC compilers CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS property is used
 add_RunCMake_test(AutoExportDll)
+
+add_RunCMake_test(AndroidMK)
+
+if(CMake_TEST_ANDROID_NDK OR CMake_TEST_ANDROID_STANDALONE_TOOLCHAIN)
+  if(NOT "${CMAKE_GENERATOR}" MATCHES "Make|Ninja")
+    message(FATAL_ERROR "Android tests supported only by Makefile and Ninja generators")
+  endif()
+  foreach(v TEST_ANDROID_NDK TEST_ANDROID_STANDALONE_TOOLCHAIN)
+    if(CMake_${v})
+      string(REPLACE ";" "|" ${v} "${CMake_${v}}")
+      list(APPEND Android_ARGS "-D${v}=${${v}}")
+    endif()
+  endforeach()
+
+  add_RunCMake_test(Android)
+
+  # This test can take a very long time due to lots of combinations.
+  # Use a long default timeout and provide an option to customize it.
+  if(NOT DEFINED CMake_TEST_ANDROID_TIMEOUT)
+    set(CMake_TEST_ANDROID_TIMEOUT 3000)
+  endif()
+  set_property(TEST RunCMake.Android PROPERTY TIMEOUT ${CMake_TEST_ANDROID_TIMEOUT})
+endif()

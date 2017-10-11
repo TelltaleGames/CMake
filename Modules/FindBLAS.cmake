@@ -1,3 +1,6 @@
+# Distributed under the OSI-approved BSD 3-Clause License.  See accompanying
+# file Copyright.txt or https://cmake.org/licensing for details.
+
 #.rst:
 # FindBLAS
 # --------
@@ -29,26 +32,32 @@
 #      all the possibilities
 #   BLA_F95     if set on tries to find the f95 interfaces for BLAS/LAPACK
 #
-# ######### ## List of vendors (BLA_VENDOR) valid in this module #
-# Goto,OpenBLAS,ATLAS PhiPACK,CXML,DXML,SunPerf,SCSL,SGIMATH,IBMESSL,
-# Intel10_32 (intel mkl v10 32 bit),Intel10_64lp (intel mkl v10 64 bit,
-# lp thread model, lp64 model), # Intel10_64lp_seq (intel mkl v10 64
-# bit,sequential code, lp64 model), # Intel( older versions of mkl 32
-# and 64 bit), ACML,ACML_MP,ACML_GPU,Apple, NAS, Generic C/CXX should be
-# enabled to use Intel mkl
-
-#=============================================================================
-# Copyright 2007-2009 Kitware, Inc.
+# List of vendors (BLA_VENDOR) valid in this module:
 #
-# Distributed under the OSI-approved BSD License (the "License");
-# see accompanying file Copyright.txt for details.
+# * Goto
+# * OpenBLAS
+# * ATLAS PhiPACK
+# * CXML
+# * DXML
+# * SunPerf
+# * SCSL
+# * SGIMATH
+# * IBMESSL
+# * Intel10_32 (intel mkl v10 32 bit)
+# * Intel10_64lp (intel mkl v10 64 bit, lp thread model, lp64 model)
+# * Intel10_64lp_seq (intel mkl v10 64 bit, sequential code, lp64 model)
+# * Intel (older versions of mkl 32 and 64 bit)
+# * ACML
+# * ACML_MP
+# * ACML_GPU
+# * Apple
+# * NAS
+# * Generic
 #
-# This software is distributed WITHOUT ANY WARRANTY; without even the
-# implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-# See the License for more information.
-#=============================================================================
-# (To distribute this file outside of CMake, substitute the full
-#  License text for the above reference.)
+# .. note::
+#
+#   C/CXX should be enabled to use Intel mkl
+#
 
 include(${CMAKE_CURRENT_LIST_DIR}/CheckFunctionExists.cmake)
 include(${CMAKE_CURRENT_LIST_DIR}/CheckFortranFunctionExists.cmake)

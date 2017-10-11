@@ -1,6 +1,7 @@
 include(RunCMake)
 
-if(RunCMake_GENERATOR STREQUAL "Borland Makefiles")
+if(RunCMake_GENERATOR STREQUAL "Borland Makefiles" OR
+   RunCMake_GENERATOR STREQUAL "Watcom WMake")
   set(fs_delay 3)
 else()
   set(fs_delay 1.125)
@@ -30,7 +31,7 @@ function(run_BuildDepends CASE)
 endfunction()
 
 run_BuildDepends(C-Exe)
-if(NOT RunCMake_GENERATOR MATCHES "Visual Studio 7|Xcode")
+if(NOT RunCMake_GENERATOR STREQUAL "Xcode")
   if(RunCMake_GENERATOR MATCHES "Visual Studio 10")
     # VS 10 forgets to re-link when a manifest changes
     set(run_BuildDepends_skip_step_2 1)
@@ -42,9 +43,11 @@ endif()
 run_BuildDepends(Custom-Symbolic-and-Byproduct)
 run_BuildDepends(Custom-Always)
 
-if(RunCMake_GENERATOR MATCHES "Make" AND
-   NOT "${RunCMake_BINARY_DIR}" STREQUAL "${RunCMake_SOURCE_DIR}")
-  run_BuildDepends(MakeInProjectOnly)
+if(RunCMake_GENERATOR MATCHES "Make")
+  run_BuildDepends(MakeCustomIncludes)
+  if(NOT "${RunCMake_BINARY_DIR}" STREQUAL "${RunCMake_SOURCE_DIR}")
+    run_BuildDepends(MakeInProjectOnly)
+  endif()
 endif()
 
 function(run_ReGeneration)

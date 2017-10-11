@@ -1,3 +1,6 @@
+# Distributed under the OSI-approved BSD 3-Clause License.  See accompanying
+# file Copyright.txt or https://cmake.org/licensing for details.
+
 #[=======================================================================[.rst:
 FindXCTest
 ----------
@@ -57,19 +60,6 @@ The following variables are set by including this module:
   The location of the XCTest Framework.
 
 #]=======================================================================]
-
-#=============================================================================
-# Copyright 2015 Gregor Jasny
-#
-# Distributed under the OSI-approved BSD License (the "License");
-# see accompanying file Copyright.txt for details.
-#
-# This software is distributed WITHOUT ANY WARRANTY; without even the
-# implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-# See the License for more information.
-#=============================================================================
-# (To distribute this file outside of CMake, substitute the full
-#  License text for the above reference.)
 
 find_path(XCTest_INCLUDE_DIR
   NAMES "XCTest/XCTest.h"
@@ -131,6 +121,10 @@ function(xctest_add_bundle target testee)
 
   if(_testee_type STREQUAL "SHARED_LIBRARY" AND _testee_framework)
     # testee is a Framework
+    target_link_libraries(${target} PRIVATE ${testee})
+
+  elseif(_testee_type STREQUAL "STATIC_LIBRARY")
+    # testee is a static library
     target_link_libraries(${target} PRIVATE ${testee})
 
   elseif(_testee_type STREQUAL "EXECUTABLE" AND _testee_macosx_bundle)
