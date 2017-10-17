@@ -54,20 +54,16 @@ public:
     if (strcmp(p, "ARM") == 0) {
       return new cmGlobalVisualStudio14Generator(cm, genName, "ARM");
     }
-	if (strcmp(p, "XBOne") == 0)
-	{
+	if (strcmp(p, "XBOne") == 0) {
 	  return new cmGlobalVisualStudio14Generator(cm, genName, "Durango");
 	}
-	if(strcmp(p, "PS4") == 0)
-	{
+	if(strcmp(p, "PS4") == 0) {
 	  return new cmGlobalVisualStudio14Generator(cm, genName, "ORBIS");
 	}
-	if( strcmp( p, "WiiU" ) == 0 )
-	{
+	if( strcmp( p, "WiiU" ) == 0 ) {
 	  return new cmGlobalVisualStudio14Generator( cm, genName, "Cafe" );
 	}
-	if( strcmp( p, "NX" ) == 0 )
-	{
+	if( strcmp( p, "NX" ) == 0 ) {
 	  return new cmGlobalVisualStudio14Generator( cm, genName, "NX64" );
 	}	
     return 0;

@@ -52,6 +52,15 @@ public:
     if (strcmp(p, "ARM") == 0) {
       return new cmGlobalVisualStudio15Generator(cm, genName, "ARM");
     }
+	if (strcmp(p, "XBOne") == 0) {
+		return new cmGlobalVisualStudio15Generator(cm, genName, "Durango");
+	}
+	if(strcmp(p, "PS4") == 0) {
+		return new cmGlobalVisualStudio15Generator(cm, genName, "ORBIS");
+	}
+	if( strcmp( p, "NX" ) == 0 ) {
+		return new cmGlobalVisualStudio15Generator( cm, genName, "NX64" );
+	}
     return 0;
   }
 
@@ -67,6 +76,9 @@ public:
     names.push_back(vs15generatorName);
     names.push_back(vs15generatorName + std::string(" ARM"));
     names.push_back(vs15generatorName + std::string(" Win64"));
+	names.push_back(vs15generatorName + std::string(" XBOne"));
+	names.push_back(vs15generatorName + std::string(" PS4"));
+	names.push_back(vs15generatorName + std::string(" NX"));
   }
 
   bool SupportsToolset() const CM_OVERRIDE { return true; }
